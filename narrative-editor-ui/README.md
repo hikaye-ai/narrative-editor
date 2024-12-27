@@ -11,10 +11,10 @@ This project is built with React and Vite, providing a fast and efficient develo
 2. **Installation**
    ```bash
    # Clone the repository
-   git clone [your-repo-url]
+   git clone https://github.com/hikaye-ai/narrative-editor.git
 
    # Navigate to project directory
-   cd [project-name]
+   cd narrative-editor
 
    # Install dependencies
    npm install
@@ -46,4 +46,3 @@ This project is built with React and Vite, providing a fast and efficient develo
 - `preview` - Preview production build locally
 - `lint` - Run ESLint
 
-## Project Structure
