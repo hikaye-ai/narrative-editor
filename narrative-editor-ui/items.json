@@ -1,0 +1,48 @@
+{
+  "items": {
+    "Basic Toolkit": {
+      "description": "A set of essential repair tools",
+      "immediate_use": false,
+      "effect": "Bypasses TECH checks for repairs",
+      "bypass_check": "TECH",
+      "stats_effect": null
+    },
+    "Life Support Bypass": {
+      "description": "Emergency life support override device",
+      "immediate_use": false,
+      "effect": "Bypasses TECH checks for life support systems",
+      "bypass_check": "TECH",
+      "stats_effect": null
+    },
+    "Basic Medkit": {
+      "description": "Standard medical supplies",
+      "immediate_use": true,
+      "effect": "Restores health when used",
+      "bypass_check": null,
+      "stats_effect": {
+        "health": 20,
+        "oxygen": 0
+      }
+    },
+    "Extra Oxygen Canister": {
+      "description": "Portable oxygen supply",
+      "immediate_use": true,
+      "effect": "Restores oxygen when used",
+      "bypass_check": null,
+      "stats_effect": {
+        "health": 0,
+        "oxygen": 25
+      }
+    },
+    "Undamaged Oxygen Tank": {
+      "description": "Large oxygen reservoir",
+      "immediate_use": true,
+      "effect": "Significantly restores oxygen when used",
+      "bypass_check": null,
+      "stats_effect": {
+        "health": 0,
+        "oxygen": 50
+      }
+    }
+  }
+} 

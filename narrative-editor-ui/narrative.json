@@ -1,0 +1,888 @@
+{
+  "chapters": [
+    {
+      "chapter_id": 1,
+      "title": "Chapter 1 (Day 1): The Crash",
+      "location": "Crashed Starship Perimeter",
+      "initial_oxygen": 100,
+      "initial_health": 100,
+      "scenes": {
+        "Scene 1: Alarms in the Void": {
+          "name": "Alarms in the Void",
+          "description": "Red lights pulse and klaxons echo through the bridge. Systems are failing rapidly.",
+          "location": "Mariner’s Torch (In Flight - Bridge)",
+          "actions": {
+            "Attempt Quick Fix": {
+              "next_scene": "Scene 2: Battening Down",
+              "dice_check": "TECH",
+              "oxygen_change": -2,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            },
+            "Ignore Alarms and Brace": {
+              "next_scene": "Scene 4: The Storm Hits",
+              "dice_check": null,
+              "oxygen_change": -1,
+              "health_change": -2,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 0,
+                "achievements": []
+              }
+            },
+            "Run System Diagnostics": {
+              "next_scene": "Scene 2: Battening Down",
+              "dice_check": "TECH",
+              "oxygen_change": -3,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 15,
+                "achievements": [
+                  "Quick_Analysis"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 2: Battening Down": {
+          "name": "Battening Down",
+          "description": "You seal bulkheads and divert power to shielding in preparation for the storm.",
+          "location": "Mariner’s Torch (In Flight - Securing Bulkheads/Shields)",
+          "actions": {
+            "Seal Bulkheads Quickly": {
+              "next_scene": "Scene 3: Desperate Escape Burn",
+              "dice_check": "TECH",
+              "oxygen_change": -2,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            },
+            "Reinforce Shields": {
+              "next_scene": "Scene 4: The Storm Hits",
+              "dice_check": "TECH",
+              "oxygen_change": -3,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 8,
+                "achievements": []
+              }
+            },
+            "Coordinate with Ship AI": {
+              "next_scene": "Scene 3: Desperate Escape Burn",
+              "dice_check": "SOC",
+              "oxygen_change": -1,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 2,
+                "health_gain": 0,
+                "xp_gain": 8,
+                "achievements": [
+                  "AI_Cooperation"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 3: Desperate Escape Burn": {
+          "name": "Desperate Escape Burn",
+          "description": "You push engines to maximum, hoping to outrun the cosmic storm.",
+          "location": "Mariner’s Torch (In Flight - Engine Control Station)",
+          "actions": {
+            "Fire Engines Full Throttle": {
+              "next_scene": "Scene 4: The Storm Hits",
+              "dice_check": null,
+              "oxygen_change": -1,
+              "health_change": -3,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 2
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            },
+            "Play It Safe": {
+              "next_scene": "Scene 4: The Storm Hits",
+              "dice_check": null,
+              "oxygen_change": 0,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            }
+          }
+        },
+        "Scene 4: The Storm Hits": {
+          "name": "The Storm Hits",
+          "description": "Lightning arcs rake across the hull as the cosmic storm collides with the ship.",
+          "location": "Mariner’s Torch (In Flight - Ship-wide Impact)",
+          "actions": {
+            "Attempt Emergency Maneuvers": {
+              "next_scene": "Scene 5: Cockpit Struggle",
+              "dice_check": "STR",
+              "oxygen_change": -2,
+              "health_change": -1,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 1
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            },
+            "Divert Power to Hull Integrity": {
+              "next_scene": "Scene 6: Thruster Overburn",
+              "dice_check": "TECH",
+              "oxygen_change": -3,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 8,
+                "achievements": []
+              }
+            }
+          }
+        },
+        "Scene 5: Cockpit Struggle": {
+          "name": "Cockpit Struggle",
+          "description": "Fighting the failing controls, you wrestle to stabilize the ship’s trajectory.",
+          "location": "Mariner’s Torch (In Flight - Cockpit)",
+          "actions": {
+            "Strain to Steady the Ship": {
+              "next_scene": "Scene 7: Violent Crash Landing",
+              "dice_check": "STR",
+              "oxygen_change": -1,
+              "health_change": -2,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 2
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            },
+            "Eject Fuel to Lighten Load": {
+              "next_scene": "Scene 9: Fuel Dump and Rapid Descent",
+              "dice_check": "TECH",
+              "oxygen_change": -1,
+              "health_change": -1,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            }
+          }
+        },
+        "Scene 6: Thruster Overburn": {
+          "name": "Thruster Overburn",
+          "description": "You ignore the warning alarms and pour all available fuel into the thrusters.",
+          "location": "Mariner’s Torch (In Flight - Engine Console)",
+          "actions": {
+            "Overload Engines": {
+              "next_scene": "Scene 7: Violent Crash Landing",
+              "dice_check": "TECH",
+              "oxygen_change": -2,
+              "health_change": -3,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 2
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            },
+            "Reduce Power at Last Second": {
+              "next_scene": "Scene 8: Emergency Measures Deployed",
+              "dice_check": "TECH",
+              "oxygen_change": -1,
+              "health_change": -1,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            }
+          }
+        },
+        "Scene 7: Violent Crash Landing": {
+          "name": "Violent Crash Landing",
+          "description": "The ship slams into the planet’s surface, wreaking havoc on the hull.",
+          "location": "Crash Site (Mariner’s Torch) – Final Descent & Impact",
+          "actions": {
+            "Brace for Impact": {
+              "next_scene": "Scene 10: Coming to Your Senses",
+              "dice_check": null,
+              "oxygen_change": -3,
+              "health_change": -5,
+              "penalties": {
+                "oxygen_loss": 2,
+                "health_loss": 2
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 15,
+                "achievements": []
+              }
+            },
+            "Deploy Crash Balloons (if any)": {
+              "next_scene": "Scene 8: Emergency Measures Deployed",
+              "dice_check": "TECH",
+              "oxygen_change": -2,
+              "health_change": -2,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 1
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            }
+          }
+        },
+        "Scene 8: Emergency Measures Deployed": {
+          "name": "Emergency Measures Deployed",
+          "description": "Automatic safety systems cushion your descent, reducing impact damage.",
+          "location": "Crash Site (Mariner’s Torch) – Impact Moment/Automated Systems",
+          "actions": {
+            "Regain Composure": {
+              "next_scene": "Scene 10: Coming to Your Senses",
+              "dice_check": null,
+              "oxygen_change": -2,
+              "health_change": -3,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 1
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            },
+            "Attempt Manual Override": {
+              "next_scene": "Scene 10: Coming to Your Senses",
+              "dice_check": "TECH",
+              "oxygen_change": -1,
+              "health_change": -2,
+              "penalties": {
+                "oxygen_loss": 2,
+                "health_loss": 1
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 15,
+                "achievements": [
+                  "Safety_Expert"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 9: Fuel Dump and Rapid Descent": {
+          "name": "Fuel Dump and Rapid Descent",
+          "description": "You dump fuel to prevent an explosion, but your descent is now largely uncontrolled.",
+          "location": "Crash Site (Mariner’s Torch) – Plummeting Toward the Surface",
+          "actions": {
+            "Ride It Out": {
+              "next_scene": "Scene 7: Violent Crash Landing",
+              "dice_check": null,
+              "oxygen_change": -2,
+              "health_change": -4,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 2
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 0,
+                "achievements": []
+              }
+            },
+            "Fight for Control": {
+              "next_scene": "Scene 8: Emergency Measures Deployed",
+              "dice_check": "STR",
+              "oxygen_change": -2,
+              "health_change": -2,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 2
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 12,
+                "achievements": [
+                  "Iron_Will"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 10: Coming to Your Senses": {
+          "name": "Coming to Your Senses",
+          "description": "You awaken in the wreckage, disoriented but alive. Smoke and sparks surround you.",
+          "location": "Crash Site (Mariner’s Torch) – Wreckage Interior",
+          "actions": {
+            "Check Injuries": {
+              "next_scene": "Scene 14: Emergency Medical Stop",
+              "dice_check": "TECH",
+              "oxygen_change": -1,
+              "health_change": -1,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 1
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            },
+            "Try to Find a Way Out": {
+              "next_scene": "Scene 11: Echoing Silence",
+              "dice_check": null,
+              "oxygen_change": -2,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            },
+            "Search for Survivors": {
+              "next_scene": "Scene 12: Surveying the Damage",
+              "dice_check": "SOC",
+              "oxygen_change": -2,
+              "health_change": -1,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": [
+                  "Thorough_Search"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 11: Echoing Silence": {
+          "name": "Echoing Silence",
+          "description": "You call out into the wreckage, but there's no answer. You may be the only survivor.",
+          "location": "Crash Site (Mariner’s Torch) – Wreckage Corridors",
+          "actions": {
+            "Push Deeper Into the Wreck": {
+              "next_scene": "Scene 12: Surveying the Damage",
+              "dice_check": null,
+              "oxygen_change": -1,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            }
+          }
+        },
+        "Scene 12: Surveying the Damage": {
+          "name": "Surveying the Damage",
+          "description": "You pick your way through twisted corridors, taking stock of what's left of the ship.",
+          "location": "Crash Site (Mariner’s Torch) – Twisted Corridors / Bulkheads",
+          "actions": {
+            "Check Structural Integrity": {
+              "next_scene": "Scene 13: Sealing Bulkheads",
+              "dice_check": "TECH",
+              "oxygen_change": -2,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            },
+            "Hurry to Find Supplies": {
+              "next_scene": "Scene 19: Final Ship Sweep",
+              "dice_check": null,
+              "oxygen_change": -1,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            }
+          }
+        },
+        "Scene 13: Sealing Bulkheads": {
+          "name": "Sealing Bulkheads",
+          "description": "You manually seal sections of the ship to prevent total atmospheric loss.",
+          "location": "Crash Site (Mariner’s Torch) – Various Ship Compartments",
+          "actions": {
+            "Seal Off Damaged Compartments": {
+              "next_scene": "Scene 14: Emergency Medical Stop",
+              "dice_check": "TECH",
+              "oxygen_change": -2,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [
+                  "Life Support Bypass"
+                ],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            },
+            "Reroute Life Support": {
+              "next_scene": "Scene 14: Emergency Medical Stop",
+              "dice_check": "TECH",
+              "dice_bypass_items": [
+                "Life Support Bypass"
+              ],
+              "oxygen_change": -3,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 2,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 5,
+                "health_gain": 0,
+                "xp_gain": 15,
+                "achievements": [
+                  "Life_Support_Expert"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 14: Emergency Medical Stop": {
+          "name": "Emergency Medical Stop",
+          "description": "You locate a battered medkit in an emergency locker, hoping to treat injuries.",
+          "location": "Crash Site (Mariner’s Torch) – Medbay or Emergency Locker",
+          "actions": {
+            "Treat Wounds": {
+              "next_scene": "Scene 15: Crew Quarters Ruins",
+              "dice_check": "TECH",
+              "oxygen_change": -1,
+              "health_change": 2,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 15,
+                "achievements": []
+              }
+            },
+            "Salvage Medical Supplies": {
+              "next_scene": "Scene 19: Final Ship Sweep",
+              "dice_check": null,
+              "oxygen_change": -1,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [
+                  "Basic Medkit"
+                ],
+                "oxygen_gain": 0,
+                "health_gain": 2,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            }
+          }
+        },
+        "Scene 15: Crew Quarters Ruins": {
+          "name": "Crew Quarters Ruins",
+          "description": "Half-collapsed bunks remind you of the friends you've lost.",
+          "location": "Crash Site (Mariner’s Torch) – Collapsed Crew Quarters",
+          "actions": {
+            "Search for Personal Gear": {
+              "next_scene": "Scene 16: Hazardous Search",
+              "dice_check": null,
+              "oxygen_change": -1,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            },
+            "Recover Ship's Log": {
+              "next_scene": "Scene 16: Hazardous Search",
+              "dice_check": "TECH",
+              "oxygen_change": -2,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": [
+                  "Data_Recovery"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 16: Hazardous Search": {
+          "name": "Hazardous Search",
+          "description": "You open a sealed hatch, risking exposure to the vacuum or other dangers.",
+          "location": "Crash Site (Mariner’s Torch) – Sealed Hatch / Unknown Section",
+          "actions": {
+            "Open Hatch Carefully": {
+              "next_scene": "Scene 17: The Engine Room Wreckage",
+              "dice_check": "TECH",
+              "dice_bypass_items": [
+                "Basic Toolkit"
+              ],
+              "oxygen_change": -2,
+              "health_change": -1,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 1
+              },
+              "rewards": {
+                "items": [
+                  "Undamaged Oxygen Tank"
+                ],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            },
+            "Abort and Move On": {
+              "next_scene": "Scene 12: Surveying the Damage",
+              "dice_check": null,
+              "oxygen_change": -1,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 0,
+                "achievements": []
+              }
+            }
+          }
+        },
+        "Scene 17: The Engine Room Wreckage": {
+          "name": "The Engine Room Wreckage",
+          "description": "The once-humming core of the Mariner’s Torch is now twisted metal and sparks.",
+          "location": "Crash Site (Mariner’s Torch) – Engine Room",
+          "actions": {
+            "Examine Wrecked Engine": {
+              "next_scene": "Scene 18: Checking the Oxygen Supply",
+              "dice_check": "TECH",
+              "oxygen_change": -2,
+              "health_change": -1,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": []
+              }
+            },
+            "Salvage Power Cells": {
+              "next_scene": "Scene 18: Checking the Oxygen Supply",
+              "dice_check": "STR",
+              "oxygen_change": -2,
+              "health_change": -2,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 1
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 12,
+                "achievements": [
+                  "Power_Recovery"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 18: Checking the Oxygen Supply": {
+          "name": "Checking the Oxygen Supply",
+          "description": "You find the central life support readout—cracked, but still flickering vital info.",
+          "location": "Crash Site (Mariner’s Torch) – Life Support Console",
+          "actions": {
+            "Take Note of Remaining Oxygen": {
+              "next_scene": "Scene 19: Final Ship Sweep",
+              "dice_check": null,
+              "oxygen_change": 0,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 5,
+                "achievements": []
+              }
+            },
+            "Attempt Emergency Reboot": {
+              "next_scene": "Scene 19: Final Ship Sweep",
+              "dice_check": "TECH",
+              "oxygen_change": -3,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 2,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 10,
+                "health_gain": 0,
+                "xp_gain": 15,
+                "achievements": [
+                  "Life_Support_Restored"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 19: Final Ship Sweep": {
+          "name": "Final Ship Sweep",
+          "description": "You gather final items—tools, oxygen canisters, anything that might help your survival.",
+          "location": "Crash Site (Mariner’s Torch) – Various Compartments",
+          "actions": {
+            "Scour the Debris": {
+              "next_scene": "Scene 20: Stepping Out",
+              "dice_check": null,
+              "oxygen_change": -1,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 0,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [
+                  "Basic Toolkit",
+                  "Extra Oxygen Canister"
+                ],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 15,
+                "achievements": []
+              }
+            },
+            "Search Hidden Compartments": {
+              "next_scene": "Scene 20: Stepping Out",
+              "dice_check": "TECH",
+              "oxygen_change": -2,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 10,
+                "achievements": [
+                  "Hidden_Cache"
+                ]
+              }
+            }
+          }
+        },
+        "Scene 20: Stepping Out": {
+          "name": "Stepping Out",
+          "description": "With a portable oxygen pack strapped on, you open the outer hatch to face the planet’s surface.",
+          "location": "Crash Site (Mariner’s Torch) – Outer Hatch & Planet Surface",
+          "actions": {
+            "Final Systems Check": {
+              "next_scene": "END_OF_DAY_1",
+              "dice_check": "TECH",
+              "oxygen_change": -1,
+              "health_change": 0,
+              "penalties": {
+                "oxygen_loss": 1,
+                "health_loss": 0
+              },
+              "rewards": {
+                "items": [],
+                "oxygen_gain": 0,
+                "health_gain": 0,
+                "xp_gain": 15,
+                "achievements": [
+                  "Chapter1_Complete",
+                  "Thorough_Preparation"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
