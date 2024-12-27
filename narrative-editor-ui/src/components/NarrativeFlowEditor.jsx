@@ -30,6 +30,19 @@ const DICE_CHECK_OPTIONS = [
   { value: 'TECH', label: 'TECH' },
 ];
 
+const minimapStyle = {
+  height: 120,
+  backgroundColor: '#f8f9fa',
+  maskColor: 'rgb(0, 0, 0, 0.2)',
+  border: '1px solid #ddd',
+};
+
+// Add this function to generate node colors for the minimap
+const getMinimapNodeColor = (node) => {
+  // You can customize colors based on node type or other properties
+  return '#2563eb';
+};
+
 const getLayoutedElements = (nodes, edges, direction = 'LR') => {
   dagreGraph.setGraph({ 
     rankdir: direction, 
@@ -565,6 +578,19 @@ const Notification = ({ message, onHide }) => {
   );
 };
 
+// Update the getViewportCenter function
+const getViewportCenter = (reactFlowInstance) => {
+  const { x, y, zoom } = reactFlowInstance.getViewport();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // Calculate the center in flow coordinates
+  return {
+    x: (-x + viewportWidth / 2) / zoom - nodeWidth / 2,
+    y: (-y + viewportHeight / 2) / zoom - nodeHeight / 2
+  };
+};
+
 const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
   const {
     state: narrativeState,
@@ -614,7 +640,10 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
-  // Modified save handler to update history
+  // Add this near the top of the component with other state declarations
+  const [focusedNodeId, setFocusedNodeId] = useState(null);
+
+  // Modify the handleSaveScene function to track the focused node
   const handleSaveScene = useCallback((sceneId, updatedScene) => {
     const newNarrative = {
       ...narrativeState,
@@ -631,20 +660,146 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     onSaveScene(sceneId, updatedScene);
   }, [narrativeState, pushNarrativeState, onSaveScene]);
 
-  // Add ref to store ReactFlow instance
-  const onInit = (instance) => {
-    reactFlowInstance.current = instance;
-    // If we already have a start node, position it on the left
-    if (startNodeRef.current && reactFlowInstance.current) {
-      const { y } = startNodeRef.current;
-      // Set viewport to position the start node on the left with some padding
-      reactFlowInstance.current.setViewport({
-        x: 50,  // Add some left padding
-        y: -y + window.innerHeight,  // Center vertically
-        zoom: 0.75  // Set a reasonable zoom level
-      });
+  // Add this effect to handle focusing on the edited node
+  useEffect(() => {
+    if (focusedNodeId && reactFlowInstance.current) {
+      const node = nodes.find(n => n.id === focusedNodeId);
+      if (node) {
+        // Only update positions if node is outside viewport
+        const { x, y, zoom } = reactFlowInstance.current.getViewport();
+        const viewportWidth = window.innerWidth / zoom;
+        const viewportHeight = window.innerHeight / zoom;
+        
+        const isNodeVisible = 
+          node.position.x >= -x && 
+          node.position.x <= -x + viewportWidth &&
+          node.position.y >= -y && 
+          node.position.y <= -y + viewportHeight;
+
+        if (!isNodeVisible) {
+          reactFlowInstance.current.setCenter(
+            node.position.x + nodeWidth / 2,
+            node.position.y + nodeHeight / 2,
+            { duration: 800, zoom: zoom }
+          );
+        }
+      }
+      setFocusedNodeId(null);
     }
+  }, [nodes, focusedNodeId]);
+
+  // Update the effect that handles data updates to preserve node positions when possible
+  useEffect(() => {
+    const chapter = narrativeState.chapters[0];
+    const scenes = chapter.scenes;
+    
+    // Try to preserve existing node positions
+    const existingNodePositions = nodes.reduce((acc, node) => {
+      acc[node.id] = node.position;
+      return acc;
+    }, {});
+
+    const { nodes: updatedNodes, edges: updatedEdges } = createNodesAndEdges(
+      scenes,
+      existingNodePositions // Pass existing positions to createNodesAndEdges
+    );
+    
+    setNodes(updatedNodes);
+    setEdges(updatedEdges);
+  }, [narrativeState]);
+
+  // Modify createNodesAndEdges to accept and use existing positions
+  const createNodesAndEdges = (scenes, existingPositions = {}) => {
+    const incomingConnections = new Map();
+    Object.entries(scenes).forEach(([_, scene]) => {
+      Object.entries(scene.actions).forEach(([_, action]) => {
+        if (action.next_scene) {
+          incomingConnections.set(action.next_scene, (incomingConnections.get(action.next_scene) || 0) + 1);
+        }
+      });
+    });
+
+    const initialNodes = Object.entries(scenes).map(([sceneId, scene]) => ({
+      id: sceneId,
+      type: 'custom',
+      data: {
+        ...scene,
+        originalId: sceneId
+      },
+      // Use scene's stored position, then existing position, then default
+      position: scene.position || existingPositions[sceneId] || { x: 0, y: 0 },
+    }));
+
+    const initialEdges = [];
+    Object.entries(scenes).forEach(([sourceId, scene]) => {
+      Object.entries(scene.actions).forEach(([actionName, action]) => {
+        const targetSceneId = action.next_scene;
+        if (scenes[targetSceneId]) {
+          initialEdges.push({
+            id: `${sourceId}-${targetSceneId}-${actionName}`,
+            source: sourceId,
+            target: targetSceneId,
+            sourceHandle: 'right',
+            targetHandle: 'left',
+            animated: true,
+            label: actionName,
+            type: 'smoothstep',
+            style: { stroke: '#2563eb', strokeWidth: 2 },
+            labelStyle: { fill: '#444', fontSize: 12 },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#2563eb',
+            },
+          });
+        }
+      });
+    });
+
+    // Only apply layout if we don't have existing positions
+    const shouldApplyLayout = Object.keys(existingPositions).length === 0;
+    const layouted = shouldApplyLayout ? 
+      getLayoutedElements(initialNodes, initialEdges) : 
+      { nodes: initialNodes, edges: initialEdges };
+
+    const startNode = layouted.nodes.find(node => !incomingConnections.has(node.id));
+
+    return {
+      nodes: layouted.nodes,
+      edges: layouted.edges,
+      startNode
+    };
   };
+
+  const [notification, setNotification] = useState(null);
+
+  // Modify the undo/redo handlers to show notifications
+  const handleUndo = () => {
+    undo();
+    setNotification('Changes undone');
+  };
+
+  const handleRedo = () => {
+    redo();
+    setNotification('Changes redone');
+  };
+
+  // Update keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.ctrlKey || event.metaKey) {
+        if (event.key === 'z' && !event.shiftKey) {
+          event.preventDefault();
+          handleUndo();
+        } else if ((event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+          event.preventDefault();
+          handleRedo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
 
   // Add scene rename handler
   const handleRenameScene = useCallback((oldId, newId) => {
@@ -688,7 +843,7 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     onSaveScene(newId, newNarrative.chapters[0].scenes[newId]);
   }, [narrativeState, pushNarrativeState, onSaveScene]);
 
-  // Add new scene handler
+  // Update the handleAddScene function
   const handleAddScene = useCallback(() => {
     const chapter = narrativeState.chapters[0];
     const scenes = chapter.scenes;
@@ -701,12 +856,19 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
       counter++;
     }
 
+    // Get the center position of the current viewport
+    let position = { x: 0, y: 0 };
+    if (reactFlowInstance.current) {
+      position = getViewportCenter(reactFlowInstance.current);
+    }
+
     // Create new scene with default values
     const newScene = {
       name: newSceneId,
       description: '',
       location: '',
-      actions: {}
+      actions: {},
+      position // Store position with the scene
     };
 
     // Add new scene to narrative
@@ -723,6 +885,7 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
 
     pushNarrativeState(newNarrative);
     onSaveScene(newSceneId, newScene);
+    setFocusedNodeId(newSceneId); // Optional: focus on the new scene
   }, [narrativeState, pushNarrativeState, onSaveScene]);
 
   // Add function to check if a scene is referenced
@@ -848,110 +1011,30 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     // Create initial layout and position to leftmost node
     const { nodes: initialNodes, startNode } = createNodesAndEdges(scenes);
     if (startNode && reactFlowInstance.current) {
-      reactFlowInstance.current.setViewport({
-        x: 50,
-        y: -startNode.position.y + window.innerHeight,
-        zoom: 0.75
-      });
+//      reactFlowInstance.current.setViewport({
+//        x: 50,
+//        y: -startNode.position.y + window.innerHeight,
+//        zoom: 0.75
+//      });
     }
   }, []); // Only run once on mount
 
-  // Effect for handling data updates without repositioning
-  useEffect(() => {
+  const onInit = useCallback((instance) => {
+    reactFlowInstance.current = instance;
+    
+    // If we have a start node, position it on the left
     const chapter = narrativeState.chapters[0];
     const scenes = chapter.scenes;
-    const { nodes: updatedNodes, edges: updatedEdges } = createNodesAndEdges(scenes);
+    const { startNode } = createNodesAndEdges(scenes);
     
-    setNodes(updatedNodes);
-    setEdges(updatedEdges);
+    if (startNode && reactFlowInstance.current) {
+      reactFlowInstance.current.setViewport({
+        x: 50,  // Add some left padding
+        y: -startNode.position.y + window.innerHeight / 2,  // Center vertically
+        zoom: 0.75  // Set a reasonable zoom level
+      });
+    }
   }, [narrativeState]);
-
-  // Helper function to create nodes and edges
-  const createNodesAndEdges = (scenes) => {
-    const incomingConnections = new Map();
-    Object.entries(scenes).forEach(([_, scene]) => {
-      Object.entries(scene.actions).forEach(([_, action]) => {
-        if (action.next_scene) {
-          incomingConnections.set(action.next_scene, (incomingConnections.get(action.next_scene) || 0) + 1);
-        }
-      });
-    });
-
-    const initialNodes = Object.entries(scenes).map(([sceneId, scene]) => ({
-      id: sceneId,
-      type: 'custom',
-      data: {
-        ...scene,
-        originalId: sceneId
-      },
-      position: { x: 0, y: 0 },
-    }));
-
-    const initialEdges = [];
-    Object.entries(scenes).forEach(([sourceId, scene]) => {
-      Object.entries(scene.actions).forEach(([actionName, action]) => {
-        const targetSceneId = action.next_scene;
-        if (scenes[targetSceneId]) {
-          initialEdges.push({
-            id: `${sourceId}-${targetSceneId}-${actionName}`,
-            source: sourceId,
-            target: targetSceneId,
-            sourceHandle: 'right',
-            targetHandle: 'left',
-            animated: true,
-            label: actionName,
-            type: 'smoothstep',
-            style: { stroke: '#2563eb', strokeWidth: 2 },
-            labelStyle: { fill: '#444', fontSize: 12 },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: '#2563eb',
-            },
-          });
-        }
-      });
-    });
-
-    const layouted = getLayoutedElements(initialNodes, initialEdges);
-    const startNode = layouted.nodes.find(node => !incomingConnections.has(node.id));
-
-    return {
-      nodes: layouted.nodes,
-      edges: layouted.edges,
-      startNode
-    };
-  };
-
-  const [notification, setNotification] = useState(null);
-
-  // Modify the undo/redo handlers to show notifications
-  const handleUndo = () => {
-    undo();
-    setNotification('Changes undone');
-  };
-
-  const handleRedo = () => {
-    redo();
-    setNotification('Changes redone');
-  };
-
-  // Update keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.ctrlKey || event.metaKey) {
-        if (event.key === 'z' && !event.shiftKey) {
-          event.preventDefault();
-          handleUndo();
-        } else if ((event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
-          event.preventDefault();
-          handleRedo();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
@@ -1018,8 +1101,15 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
         <Background color="#aaa" gap={16} />
         <Controls />
         <MiniMap 
-          nodeColor="#2563eb"
-          maskColor="rgba(0, 0, 0, 0.1)"
+          style={minimapStyle}
+          nodeColor={getMinimapNodeColor}
+          nodeStrokeWidth={3}
+          nodeStrokeColor="#fff"
+          nodeBorderRadius={2}
+          maskColor="rgb(0, 0, 0, 0.2)"
+          position="bottom-right"
+          zoomable
+          pannable
         />
       </ReactFlow>
     </div>
