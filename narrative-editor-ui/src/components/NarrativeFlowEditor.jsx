@@ -21,6 +21,7 @@ import RedoIcon from '@mui/icons-material/Redo';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import RestoreIcon from '@mui/icons-material/Restore';
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -117,49 +118,82 @@ const SceneNode = React.memo(({
   isSceneReferenced
 }) => {
   const [editedScene, setEditedScene] = useState(data);
+  const [localScene, setLocalScene] = useState(data);
   const [newActionName, setNewActionName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [sceneName, setSceneName] = useState(id);
 
-  // Update local state when props change
+  // Update both states when props change
   React.useEffect(() => {
     setEditedScene(data);
+    setLocalScene(data);
   }, [data]);
 
-  const handleSceneChange = (field, value) => {
-    const updated = {
-      ...editedScene,
+  // Handle local changes without saving
+  const handleLocalChange = (field, value) => {
+    setLocalScene(prev => ({
+      ...prev,
       [field]: value
-    };
-    setEditedScene(updated);
-    onSave(id, updated);
+    }));
   };
 
-  const handleActionChange = (actionName, field, value) => {
+  // Save changes on blur
+  const handleBlur = (field, value) => {
+    if (value !== editedScene[field]) {
+      const updated = {
+        ...editedScene,
+        [field]: value
+      };
+      setEditedScene(updated);
+      onSave(id, updated);
+    }
+  };
+
+  // Handle local action changes
+  const handleLocalActionChange = (actionName, field, value) => {
     let updatedValue = value;
     
-    // Handle nested fields (like rewards.items)
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       updatedValue = {
-        ...editedScene.actions[actionName][parent],
+        ...localScene.actions[actionName][parent],
         [child]: value
       };
       field = parent;
     }
 
-    const updated = {
-      ...editedScene,
+    setLocalScene(prev => ({
+      ...prev,
       actions: {
-        ...editedScene.actions,
+        ...prev.actions,
         [actionName]: {
-          ...editedScene.actions[actionName],
+          ...prev.actions[actionName],
           [field]: updatedValue
         }
       }
-    };
-    setEditedScene(updated);
-    onSave(id, updated);
+    }));
+  };
+
+  // Save action changes on blur
+  const handleActionBlur = (actionName, field, value) => {
+    const currentValue = field.includes('.')
+      ? editedScene.actions[actionName][field.split('.')[0]][field.split('.')[1]]
+      : editedScene.actions[actionName][field];
+
+    if (value !== currentValue) {
+      const updated = {
+        ...editedScene,
+        actions: {
+          ...editedScene.actions,
+          [actionName]: {
+            ...editedScene.actions[actionName],
+            [field]: value
+          }
+        }
+      };
+      setEditedScene(updated);
+      onSave(id, updated);
+    }
   };
 
   const addNewAction = () => {
@@ -331,15 +365,17 @@ const SceneNode = React.memo(({
               {/* Scene Basic Info */}
               <div className="space-y-3 mb-4">
                 <textarea
-                  value={editedScene.description}
-                  onChange={(e) => handleSceneChange('description', e.target.value)}
+                  value={localScene.description}
+                  onChange={(e) => handleLocalChange('description', e.target.value)}
+                  onBlur={(e) => handleBlur('description', e.target.value)}
                   className="w-full p-2 border rounded text-sm h-20"
                   placeholder="Description"
                 />
                 <input
                   type="text"
-                  value={editedScene.location}
-                  onChange={(e) => handleSceneChange('location', e.target.value)}
+                  value={localScene.location}
+                  onChange={(e) => handleLocalChange('location', e.target.value)}
+                  onBlur={(e) => handleBlur('location', e.target.value)}
                   className="w-full p-2 border rounded text-sm"
                   placeholder="Location"
                 />
@@ -367,7 +403,7 @@ const SceneNode = React.memo(({
                 </div>
 
                 <div className="space-y-3">
-                  {Object.entries(editedScene.actions).map(([actionName, action]) => (
+                  {Object.entries(localScene.actions).map(([actionName, action]) => (
                     <div key={actionName} className="border rounded p-2 text-sm">
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-medium">{actionName}</span>
@@ -383,8 +419,9 @@ const SceneNode = React.memo(({
                         <div className="relative">
                           <label className="block text-xs font-medium mb-1">Next Scene</label>
                           <select
-                            value={editedScene.actions[actionName].next_scene || ''}
-                            onChange={(e) => handleActionChange(actionName, 'next_scene', e.target.value)}
+                            value={action.next_scene || ''}
+                            onChange={(e) => handleLocalActionChange(actionName, 'next_scene', e.target.value)}
+                            onBlur={(e) => handleActionBlur(actionName, 'next_scene', e.target.value)}
                             className="w-full p-1 border rounded text-sm"
                           >
                             <option value="">Select next scene...</option>
@@ -398,8 +435,9 @@ const SceneNode = React.memo(({
                         <div>
                           <label className="block text-xs font-medium mb-1">Dice Check</label>
                           <select
-                            value={editedScene.actions[actionName].dice_check || ''}
-                            onChange={(e) => handleActionChange(actionName, 'dice_check', e.target.value || null)}
+                            value={action.dice_check || ''}
+                            onChange={(e) => handleLocalActionChange(actionName, 'dice_check', e.target.value || null)}
+                            onBlur={(e) => handleActionBlur(actionName, 'dice_check', e.target.value || null)}
                             className="w-full p-1 border rounded text-sm"
                           >
                             {DICE_CHECK_OPTIONS.map(option => (
@@ -413,11 +451,12 @@ const SceneNode = React.memo(({
                           <label className="block text-xs font-medium mb-1">Dice Bypass Items</label>
                           <select
                             multiple
-                            value={editedScene.actions[actionName].dice_bypass_items || []}
+                            value={action.dice_bypass_items || []}
                             onChange={(e) => {
                               const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                              handleActionChange(actionName, 'dice_bypass_items', selectedOptions);
+                              handleLocalActionChange(actionName, 'dice_bypass_items', selectedOptions);
                             }}
+                            onBlur={(e) => handleActionBlur(actionName, 'dice_bypass_items', Array.from(e.target.selectedOptions, option => option.value))}
                             className="w-full p-1 border rounded text-sm"
                             size={3}
                           >
@@ -432,11 +471,12 @@ const SceneNode = React.memo(({
                           <label className="block text-xs font-medium mb-1">Reward Items</label>
                           <select
                             multiple
-                            value={editedScene.actions[actionName].rewards.items || []}
+                            value={action.rewards.items || []}
                             onChange={(e) => {
                               const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                              handleActionChange(actionName, 'rewards.items', selectedOptions);
+                              handleLocalActionChange(actionName, 'rewards.items', selectedOptions);
                             }}
+                            onBlur={(e) => handleActionBlur(actionName, 'rewards.items', Array.from(e.target.selectedOptions, option => option.value))}
                             className="w-full p-1 border rounded text-sm"
                             size={3}
                           >
@@ -451,8 +491,9 @@ const SceneNode = React.memo(({
                           <label className="block text-xs font-medium mb-1">Oxygen Change</label>
                           <input
                             type="number"
-                            value={editedScene.actions[actionName].oxygen_change}
-                            onChange={(e) => handleActionChange(actionName, 'oxygen_change', parseInt(e.target.value))}
+                            value={action.oxygen_change}
+                            onChange={(e) => handleLocalActionChange(actionName, 'oxygen_change', parseInt(e.target.value))}
+                            onBlur={(e) => handleActionBlur(actionName, 'oxygen_change', parseInt(e.target.value))}
                             className="w-full p-1 border rounded text-sm"
                           />
                         </div>
@@ -460,8 +501,9 @@ const SceneNode = React.memo(({
                           <label className="block text-xs font-medium mb-1">Health Change</label>
                           <input
                             type="number"
-                            value={editedScene.actions[actionName].health_change}
-                            onChange={(e) => handleActionChange(actionName, 'health_change', parseInt(e.target.value))}
+                            value={action.health_change}
+                            onChange={(e) => handleLocalActionChange(actionName, 'health_change', parseInt(e.target.value))}
+                            onBlur={(e) => handleActionBlur(actionName, 'health_change', parseInt(e.target.value))}
                             className="w-full p-1 border rounded text-sm"
                           />
                         </div>
@@ -474,12 +516,9 @@ const SceneNode = React.memo(({
                               <label className="block text-xs font-medium mb-1">Oxygen Loss</label>
                               <input
                                 type="number"
-                                value={editedScene.actions[actionName].penalties.oxygen_loss}
-                                onChange={(e) => handleActionChange(
-                                  actionName,
-                                  'penalties.oxygen_loss',
-                                  parseInt(e.target.value)
-                                )}
+                                value={action.penalties.oxygen_loss}
+                                onChange={(e) => handleLocalActionChange(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
+                                onBlur={(e) => handleActionBlur(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
                                 className="w-full p-1 border rounded text-sm"
                               />
                             </div>
@@ -487,12 +526,9 @@ const SceneNode = React.memo(({
                               <label className="block text-xs font-medium mb-1">Health Loss</label>
                               <input
                                 type="number"
-                                value={editedScene.actions[actionName].penalties.health_loss}
-                                onChange={(e) => handleActionChange(
-                                  actionName,
-                                  'penalties.health_loss',
-                                  parseInt(e.target.value)
-                                )}
+                                value={action.penalties.health_loss}
+                                onChange={(e) => handleLocalActionChange(actionName, 'penalties.health_loss', parseInt(e.target.value))}
+                                onBlur={(e) => handleActionBlur(actionName, 'penalties.health_loss', parseInt(e.target.value))}
                                 className="w-full p-1 border rounded text-sm"
                               />
                             </div>
@@ -1135,6 +1171,25 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     }
   }, [narrativeState]);
 
+  // Update the clearHistory handler
+  const handleClearHistory = () => {
+    if (window.confirm('Are you sure you want to clear the history? This action cannot be undone.')) {
+      clearHistory();
+      setNotification('History cleared');
+    }
+  };
+
+  // Store initial narrative state
+  const initialNarrative = useRef(narrative);
+
+  // Add revert handler
+  const handleRevertAll = () => {
+    if (window.confirm('Are you sure you want to revert all changes? This will restore the narrative to its initial state and cannot be undone.')) {
+      pushNarrativeState(initialNarrative.current);
+      setNotification('All changes reverted');
+    }
+  };
+
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <div className="absolute top-20 left-4 z-10 flex gap-0.5">
@@ -1159,11 +1214,18 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
           <RedoIcon className="w-3 h-3" />
         </button>
         <button
-          onClick={clearHistory}
+          onClick={handleClearHistory}
           className="p-1 rounded text-white bg-red-500 hover:bg-red-600"
           title="Clear History"
         >
           <RestartAltIcon className="w-3 h-3" />
+        </button>
+        <button
+          onClick={handleRevertAll}
+          className="p-1 rounded text-white bg-orange-500 hover:bg-orange-600"
+          title="Revert All Changes"
+        >
+          <RestoreIcon className="w-3 h-3" />
         </button>
         <button
           onClick={handleAddScene}
