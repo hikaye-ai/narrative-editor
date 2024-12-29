@@ -127,42 +127,51 @@ const SceneNode = observer(function SceneNode({ data, id }) {
 
   const handleLocalActionChange = (actionName, field, value) => {
     let updatedValue = value;
+    let updatedAction = { ...localScene.actions[actionName] };
     
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
-      updatedValue = {
-        ...localScene.actions[actionName][parent],
+      updatedAction[parent] = {
+        ...updatedAction[parent],
         [child]: value
       };
-      field = parent;
+    } else {
+      updatedAction[field] = value;
     }
 
     setLocalScene(prev => ({
       ...prev,
       actions: {
         ...prev.actions,
-        [actionName]: {
-          ...prev.actions[actionName],
-          [field]: updatedValue
-        }
+        [actionName]: updatedAction
       }
     }));
   };
 
   const handleActionBlur = (actionName, field, value) => {
-    const currentValue = field.includes('.')
-      ? editedScene.actions[actionName][field.split('.')[0]][field.split('.')[1]]
-      : editedScene.actions[actionName][field];
+    let currentValue;
+    let updatedAction = { ...editedScene.actions[actionName] };
+
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      currentValue = editedScene.actions[actionName]?.[parent]?.[child];
+      
+      // Ensure parent object exists
+      updatedAction[parent] = {
+        ...updatedAction[parent],
+        [child]: value
+      };
+    } else {
+      currentValue = editedScene.actions[actionName]?.[field];
+      updatedAction[field] = value;
+    }
 
     if (value !== currentValue) {
       const updated = {
         ...editedScene,
         actions: {
           ...editedScene.actions,
-          [actionName]: {
-            ...editedScene.actions[actionName],
-            [field]: value
-          }
+          [actionName]: updatedAction
         }
       };
       setEditedScene(updated);
@@ -182,6 +191,7 @@ const SceneNode = observer(function SceneNode({ data, id }) {
           dice_check: null,
           oxygen_change: 0,
           health_change: 0,
+          dice_bypass_items: [],
           penalties: {
             oxygen_loss: 0,
             health_loss: 0
@@ -352,7 +362,161 @@ const SceneNode = observer(function SceneNode({ data, id }) {
                       </div>
                       {/* Action fields */}
                       <div className="grid grid-cols-2 gap-2">
-                        {/* Add your action fields here */}
+                        <div className="relative">
+                          <label className="block text-xs font-medium mb-1">Next Scene</label>
+                          <select
+                            value={action.next_scene || ''}
+                            onChange={(e) => handleLocalActionChange(actionName, 'next_scene', e.target.value)}
+                            onBlur={(e) => handleActionBlur(actionName, 'next_scene', e.target.value)}
+                            className="w-full p-1 border rounded text-sm"
+                          >
+                            <option value="">Select next scene...</option>
+                            {sceneOptions.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1">Dice Check</label>
+                          <select
+                            value={action.dice_check || ''}
+                            onChange={(e) => handleLocalActionChange(actionName, 'dice_check', e.target.value || null)}
+                            onBlur={(e) => handleActionBlur(actionName, 'dice_check', e.target.value || null)}
+                            className="w-full p-1 border rounded text-sm"
+                          >
+                            {DICE_CHECK_OPTIONS.map(option => (
+                              <option key={option.value || 'null'} value={option.value || ''}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1">Dice Bypass Items</label>
+                          <select
+                            multiple
+                            value={action.dice_bypass_items || []}
+                            onChange={(e) => {
+                              const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                              handleLocalActionChange(actionName, 'dice_bypass_items', selectedOptions);
+                            }}
+                            onBlur={(e) => handleActionBlur(actionName, 'dice_bypass_items', Array.from(e.target.selectedOptions, option => option.value))}
+                            className="w-full p-1 border rounded text-sm"
+                            size={3}
+                          >
+                            {itemOptions.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1">Reward Items</label>
+                          <select
+                            multiple
+                            value={action.rewards?.items || []}
+                            onChange={(e) => {
+                              const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                              handleLocalActionChange(actionName, 'rewards.items', selectedOptions);
+                            }}
+                            onBlur={(e) => handleActionBlur(actionName, 'rewards.items', Array.from(e.target.selectedOptions, option => option.value))}
+                            className="w-full p-1 border rounded text-sm"
+                            size={3}
+                          >
+                            {itemOptions.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1">Oxygen Change</label>
+                          <input
+                            type="number"
+                            value={action.oxygen_change}
+                            onChange={(e) => handleLocalActionChange(actionName, 'oxygen_change', parseInt(e.target.value))}
+                            onBlur={(e) => handleActionBlur(actionName, 'oxygen_change', parseInt(e.target.value))}
+                            className="w-full p-1 border rounded text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium mb-1">Health Change</label>
+                          <input
+                            type="number"
+                            value={action.health_change}
+                            onChange={(e) => handleLocalActionChange(actionName, 'health_change', parseInt(e.target.value))}
+                            onBlur={(e) => handleActionBlur(actionName, 'health_change', parseInt(e.target.value))}
+                            className="w-full p-1 border rounded text-sm"
+                          />
+                        </div>
+
+                        {/* Penalties Section */}
+                        <div className="col-span-2 border-t mt-2 pt-2">
+                          <h4 className="text-xs font-medium mb-2">Dice Check Failure Penalties</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-medium mb-1">Oxygen Loss</label>
+                              <input
+                                type="number"
+                                value={action.penalties?.oxygen_loss || 0}
+                                onChange={(e) => handleLocalActionChange(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
+                                onBlur={(e) => handleActionBlur(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
+                                className="w-full p-1 border rounded text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1">Health Loss</label>
+                              <input
+                                type="number"
+                                value={action.penalties?.health_loss || 0}
+                                onChange={(e) => handleLocalActionChange(actionName, 'penalties.health_loss', parseInt(e.target.value))}
+                                onBlur={(e) => handleActionBlur(actionName, 'penalties.health_loss', parseInt(e.target.value))}
+                                className="w-full p-1 border rounded text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Rewards Section */}
+                        <div className="col-span-2 border-t mt-2 pt-2">
+                          <h4 className="text-xs font-medium mb-2">Additional Rewards</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-medium mb-1">Oxygen Gain</label>
+                              <input
+                                type="number"
+                                value={action.rewards?.oxygen_gain || 0}
+                                onChange={(e) => handleLocalActionChange(actionName, 'rewards.oxygen_gain', parseInt(e.target.value))}
+                                onBlur={(e) => handleActionBlur(actionName, 'rewards.oxygen_gain', parseInt(e.target.value))}
+                                className="w-full p-1 border rounded text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1">Health Gain</label>
+                              <input
+                                type="number"
+                                value={action.rewards?.health_gain || 0}
+                                onChange={(e) => handleLocalActionChange(actionName, 'rewards.health_gain', parseInt(e.target.value))}
+                                onBlur={(e) => handleActionBlur(actionName, 'rewards.health_gain', parseInt(e.target.value))}
+                                className="w-full p-1 border rounded text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1">XP Gain</label>
+                              <input
+                                type="number"
+                                value={action.rewards?.xp_gain || 0}
+                                onChange={(e) => handleLocalActionChange(actionName, 'rewards.xp_gain', parseInt(e.target.value))}
+                                onBlur={(e) => handleActionBlur(actionName, 'rewards.xp_gain', parseInt(e.target.value))}
+                                className="w-full p-1 border rounded text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
