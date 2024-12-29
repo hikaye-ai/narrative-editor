@@ -14,7 +14,13 @@ import Select from 'react-select';
 import Creatable from 'react-select/creatable';
 import dagre from 'dagre';
 import 'reactflow/dist/style.css';
-import itemsData from '../../items.json'; // Adjust the path as necessary
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import UndoIcon from '@mui/icons-material/Undo';
+import RedoIcon from '@mui/icons-material/Redo';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -74,6 +80,29 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
   return { nodes: layoutedNodes, edges };
 };
 
+const extractUniqueItems = (narrative) => {
+  const items = new Set();
+  
+  narrative.chapters.forEach(chapter => {
+    Object.values(chapter.scenes).forEach(scene => {
+      Object.values(scene.actions).forEach(action => {
+        // Add items from rewards
+        if (action.rewards?.items) {
+          action.rewards.items.forEach(item => items.add(item));
+        }
+        // Add items from dice bypass
+        if (action.dice_bypass_items) {
+          action.dice_bypass_items.forEach(item => items.add(item));
+        }
+      });
+    });
+  });
+
+  return Array.from(items)
+    .sort((a, b) => a.localeCompare(b)) // Sort alphabetically
+    .map(item => ({ value: item, label: item }));
+};
+
 const SceneNode = React.memo(({ 
   data, 
   id, 
@@ -83,7 +112,9 @@ const SceneNode = React.memo(({
   onCollapse,
   onRenameScene,
   onDeleteScene,
-  canDelete
+  canDelete,
+  narrativeState,
+  isSceneReferenced
 }) => {
   const [editedScene, setEditedScene] = useState(data);
   const [newActionName, setNewActionName] = useState('');
@@ -175,7 +206,10 @@ const SceneNode = React.memo(({
 
   // Prepare options for the Select component
   const sceneOptions = allScenes.map(sceneId => ({ value: sceneId, label: sceneId }));
-  const itemOptions = Object.keys(itemsData.items).map(itemName => ({ value: itemName, label: itemName }));
+  const itemOptions = useMemo(() => 
+    extractUniqueItems(narrativeState),
+    [narrativeState]
+  );
 
   const selectStyles = {
     control: (base, state) => ({
@@ -261,15 +295,13 @@ const SceneNode = React.memo(({
                 {id}
               </div>
             )}
-            {canDelete && (
+            {!isSceneReferenced(id) && (
               <button
                 onClick={() => onDeleteScene(id)}
-                className="text-red-500 hover:text-red-700 p-1 rounded"
+                className="p-1 rounded text-red-500 hover:text-red-700"
                 title="Delete scene"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                <DeleteIcon className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -278,13 +310,9 @@ const SceneNode = React.memo(({
             className="p-1 hover:bg-gray-200 rounded ml-2"
           >
             {isCollapsed ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <ExpandMoreIcon className="w-5 h-5" />
             ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
+              <ExpandLessIcon className="w-5 h-5" />
             )}
           </button>
         </div>
@@ -591,6 +619,59 @@ const getViewportCenter = (reactFlowInstance) => {
   };
 };
 
+// Move CustomNode completely outside and make it a pure component
+const CustomNode = React.memo(function CustomNode(props) {
+  const {
+    data,
+    id,
+  } = props;
+
+  // Extract all the needed props from data
+  const {
+    onSave,
+    allScenes,
+    isCollapsed,
+    onCollapse,
+    onRenameScene,
+    onDeleteScene,
+    canDelete,
+    narrativeState,
+    originalId,
+    isSceneReferenced
+  } = data;
+
+  const nodeId = originalId || id;
+  const nodeIsCollapsed = typeof isCollapsed === 'function' 
+    ? isCollapsed(nodeId)
+    : isCollapsed;
+
+  // Create a wrapped onCollapse function that includes the node ID
+  const handleCollapse = (collapsed) => {
+    onCollapse(nodeId, collapsed);
+  };
+
+  return (
+    <SceneNode
+      data={data}
+      id={nodeId}
+      onSave={onSave}
+      allScenes={allScenes}
+      isCollapsed={nodeIsCollapsed}
+      onCollapse={handleCollapse}
+      onRenameScene={onRenameScene}
+      onDeleteScene={onDeleteScene}
+      canDelete={canDelete}
+      narrativeState={narrativeState}
+      isSceneReferenced={isSceneReferenced}
+    />
+  );
+});
+
+// Define nodeTypes as a constant outside
+const nodeTypes = {
+  custom: CustomNode
+};
+
 const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
   const {
     state: narrativeState,
@@ -888,24 +969,25 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     setFocusedNodeId(newSceneId); // Optional: focus on the new scene
   }, [narrativeState, pushNarrativeState, onSaveScene]);
 
-  // Add function to check if a scene is referenced
+  // Update the isSceneReferenced function
   const isSceneReferenced = useCallback((sceneId) => {
     const chapter = narrativeState.chapters[0];
     const scenes = chapter.scenes;
-    
+
     // Check if this scene is referenced by any other scene's action
-    const isReferencedByOthers = Object.values(scenes).some(scene => 
+    const hasIncomingReferences = Object.values(scenes).some(scene => 
       Object.values(scene.actions).some(action => 
         action.next_scene === sceneId
       )
     );
 
-    // Check if this scene has any outgoing connections
-    const hasOutgoingConnections = Object.values(scenes[sceneId]?.actions || {}).some(action => 
+    // Check if this scene has any outgoing references
+    const hasOutgoingReferences = Object.values(scenes[sceneId]?.actions || {}).some(action => 
       action.next_scene !== null && action.next_scene !== ''
     );
 
-    return isReferencedByOthers || hasOutgoingConnections;
+    // Return true if the scene has any references (meaning it cannot be deleted)
+    return hasIncomingReferences || hasOutgoingReferences;
   }, [narrativeState]);
 
   // Update the debug function to show both incoming and outgoing references
@@ -984,21 +1066,38 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     setNotification(`Scene "${sceneId}" deleted`);
   }, [narrativeState, pushNarrativeState]);
 
-  // Update nodeTypes to include delete functionality
-  const nodeTypes = useMemo(() => ({
-    custom: (props) => (
-      <SceneNode 
-        {...props} 
-        onSave={(id, scene) => handleSaveScene(props.data.originalId, scene)} 
-        allScenes={Object.keys(narrativeState.chapters[0].scenes)}
-        isCollapsed={collapsedNodes.has(props.id)}
-        onCollapse={(isCollapsed) => handleNodeCollapse(props.id, isCollapsed)}
-        onRenameScene={handleRenameScene}
-        onDeleteScene={handleDeleteScene}
-        canDelete={!isSceneReferenced(props.id)}
-      />
-    ),
-  }), [handleSaveScene, narrativeState, collapsedNodes, handleNodeCollapse, handleRenameScene, handleDeleteScene, isSceneReferenced]);
+  // Wrap node props in useMemo
+  const nodeProps = useMemo(() => ({
+    onSave: handleSaveScene,
+    allScenes: Object.keys(narrativeState.chapters[0].scenes),
+    isCollapsed: (id) => collapsedNodes.has(id),
+    onCollapse: handleNodeCollapse,
+    onRenameScene: handleRenameScene,
+    onDeleteScene: handleDeleteScene,
+    canDelete: (id) => !isSceneReferenced(id),
+    narrativeState,
+    isSceneReferenced
+  }), [
+    handleSaveScene,
+    narrativeState,
+    collapsedNodes,
+    handleNodeCollapse,
+    handleRenameScene,
+    handleDeleteScene,
+    isSceneReferenced
+  ]);
+
+  // Update nodes with the current props
+  useEffect(() => {
+    setNodes(nodes => nodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        ...nodeProps,
+        originalId: node.id
+      }
+    })));
+  }, [nodeProps, setNodes]);
 
   // Separate layout effect for initial positioning
   useEffect(() => {
@@ -1038,40 +1137,40 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <div className="absolute top-4 left-4 z-10 flex gap-2">
+      <div className="absolute top-20 left-4 z-10 flex gap-0.5">
         <button
           onClick={handleUndo}
           disabled={!canUndo}
-          className={`px-3 py-1 rounded text-white ${
+          className={`p-1 rounded text-white ${
             canUndo ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'
           }`}
           title="Undo (Ctrl+Z)"
         >
-          Undo
+          <UndoIcon className="w-3 h-3" />
         </button>
         <button
           onClick={handleRedo}
           disabled={!canRedo}
-          className={`px-3 py-1 rounded text-white ${
+          className={`p-1 rounded text-white ${
             canRedo ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'
           }`}
           title="Redo (Ctrl+Y or Ctrl+Shift+Z)"
         >
-          Redo
+          <RedoIcon className="w-3 h-3" />
         </button>
         <button
           onClick={clearHistory}
-          className="px-3 py-1 rounded text-white bg-red-500 hover:bg-red-600"
+          className="p-1 rounded text-white bg-red-500 hover:bg-red-600"
           title="Clear History"
         >
-          Clear History
+          <RestartAltIcon className="w-3 h-3" />
         </button>
         <button
           onClick={handleAddScene}
-          className="px-3 py-1 rounded text-white bg-green-500 hover:bg-green-600"
+          className="p-1 rounded text-white bg-green-500 hover:bg-green-600"
           title="Add New Scene"
         >
-          New Scene
+          <AddIcon className="w-3 h-3" />
         </button>
       </div>
 
