@@ -1,4 +1,50 @@
 {
+  "items": {
+    "Basic Toolkit": {
+      "description": "A set of essential repair tools",
+      "player_usable": false,
+      "effect": "Bypasses TECH checks for repairs",
+      "bypass_check": "TECH",
+      "stats_effect": null
+    },
+    "Life Support Bypass": {
+      "description": "Emergency life support override device",
+      "player_usable": false,
+      "effect": "Bypasses TECH checks for life support systems",
+      "bypass_check": "TECH",
+      "stats_effect": null
+    },
+    "Basic Medkit": {
+      "description": "Standard medical supplies",
+      "player_usable": true,
+      "effect": "Restores health when used",
+      "bypass_check": null,
+      "stats_effect": {
+        "health": 20,
+        "oxygen": 0
+      }
+    },
+    "Extra Oxygen Canister": {
+      "description": "Portable oxygen supply",
+      "player_usable": true,
+      "effect": "Restores oxygen when used",
+      "bypass_check": null,
+      "stats_effect": {
+        "health": 0,
+        "oxygen": 25
+      }
+    },
+    "Undamaged Oxygen Tank": {
+      "description": "Large oxygen reservoir",
+      "player_usable": true,
+      "effect": "Significantly restores oxygen when used",
+      "bypass_check": null,
+      "stats_effect": {
+        "health": 0,
+        "oxygen": 50
+      }
+    }
+  },
   "chapters": [
     {
       "chapter_id": 1,
