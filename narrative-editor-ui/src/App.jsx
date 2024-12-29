@@ -1,25 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { observer } from 'mobx-react-lite';
 import NarrativeFlowEditor from './components/NarrativeFlowEditor';
+import NarrativeStore from './stores/NarrativeStore';
 import narrative from '../narrative.json';
+import ErrorBoundary from './components/ErrorBoundary';
 
-function App() {
-  const [narrativeData, setNarrativeData] = useState(narrative);
+// Create store outside of component
+const narrativeStore = new NarrativeStore(narrative);
 
-  const handleSaveScene = (sceneId, updatedScene) => {
-    setNarrativeData(prev => ({
-      ...prev,
-      chapters: prev.chapters.map(chapter => ({
-        ...chapter,
-        scenes: {
-          ...chapter.scenes,
-          [sceneId]: updatedScene
-        }
-      }))
-    }));
-  };
-
+const App = observer(function App() {
   const handleExport = () => {
-    const dataStr = JSON.stringify(narrativeData, null, 2);
+    const dataStr = JSON.stringify(narrativeStore.narrative, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = 'narrative.json';
 
@@ -41,13 +32,12 @@ function App() {
         </button>
       </div>
       <div className="flex-1">
-        <NarrativeFlowEditor 
-          narrative={narrativeData} 
-          onSaveScene={handleSaveScene}
-        />
+        <ErrorBoundary>
+          <NarrativeFlowEditor store={narrativeStore} />
+        </ErrorBoundary>
       </div>
     </div>
   );
-}
+});
 
 export default App;
