@@ -10,8 +10,6 @@ import ReactFlow, {
   Position,
   NodeResizer,
 } from 'reactflow';
-import Select from 'react-select';
-import Creatable from 'react-select/creatable';
 import dagre from 'dagre';
 import 'reactflow/dist/style.css';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -22,6 +20,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import RestoreIcon from '@mui/icons-material/Restore';
+import PropTypes from 'prop-types';
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -45,7 +44,7 @@ const minimapStyle = {
 };
 
 // Add this function to generate node colors for the minimap
-const getMinimapNodeColor = (node) => {
+const getMinimapNodeColor = () => {
   // You can customize colors based on node type or other properties
   return '#2563eb';
 };
@@ -549,6 +548,9 @@ const SceneNode = React.memo(({
   );
 });
 
+// Add display names for memo components
+SceneNode.displayName = 'SceneNode';
+
 // Add this new component to manage history
 const useHistoryStack = (initialState, maxHistory = 100) => {
   // Load initial history and current position from localStorage
@@ -642,6 +644,9 @@ const Notification = ({ message, onHide }) => {
   );
 };
 
+// Add display names for memo components
+Notification.displayName = 'Notification';
+
 // Update the getViewportCenter function
 const getViewportCenter = (reactFlowInstance) => {
   const { x, y, zoom } = reactFlowInstance.getViewport();
@@ -702,6 +707,9 @@ const CustomNode = React.memo(function CustomNode(props) {
     />
   );
 });
+
+// Add display names for memo components
+CustomNode.displayName = 'CustomNode';
 
 // Define nodeTypes as a constant outside
 const nodeTypes = {
@@ -1275,6 +1283,25 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
       </ReactFlow>
     </div>
   );
+};
+
+// Add display names for memo components
+NarrativeFlowEditor.displayName = 'NarrativeFlowEditor';
+
+CustomNode.propTypes = {
+  data: PropTypes.shape({
+    originalId: PropTypes.string,
+    onSave: PropTypes.func,
+    allScenes: PropTypes.arrayOf(PropTypes.string),
+    isCollapsed: PropTypes.bool,
+    onCollapse: PropTypes.func,
+    onRenameScene: PropTypes.func,
+    onDeleteScene: PropTypes.func,
+    canDelete: PropTypes.func,
+    narrativeState: PropTypes.object,
+    isSceneReferenced: PropTypes.func
+  }).isRequired,
+  id: PropTypes.string.isRequired
 };
 
 export default NarrativeFlowEditor; 
