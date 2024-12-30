@@ -151,14 +151,25 @@ const SceneNode = React.memo(({
   // Handle local action changes
   const handleLocalActionChange = (actionName, field, value) => {
     let updatedValue = value;
+    let targetField = field;
     
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
-      updatedValue = {
-        ...localScene.actions[actionName][parent],
-        [child]: value
-      };
-      field = parent;
+      if (parent === 'rewards') {
+        // Special handling for rewards object
+        updatedValue = {
+          ...localScene.actions[actionName].rewards,
+          [child]: value
+        };
+        targetField = 'rewards';
+      } else if (parent === 'penalties') {
+        // Special handling for penalties object
+        updatedValue = {
+          ...localScene.actions[actionName].penalties,
+          [child]: value
+        };
+        targetField = 'penalties';
+      }
     }
 
     setLocalScene(prev => ({
@@ -167,7 +178,7 @@ const SceneNode = React.memo(({
         ...prev.actions,
         [actionName]: {
           ...prev.actions[actionName],
-          [field]: updatedValue
+          [targetField]: updatedValue
         }
       }
     }));
@@ -175,18 +186,39 @@ const SceneNode = React.memo(({
 
   // Save action changes on blur
   const handleActionBlur = (actionName, field, value) => {
-    const currentValue = field.includes('.')
-      ? editedScene.actions[actionName][field.split('.')[0]][field.split('.')[1]]
-      : editedScene.actions[actionName][field];
+    let currentValue;
+    let updatedValue = value;
+    let targetField = field;
 
-    if (value !== currentValue) {
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      if (parent === 'rewards') {
+        currentValue = editedScene.actions[actionName].rewards[child];
+        updatedValue = {
+          ...editedScene.actions[actionName].rewards,
+          [child]: value
+        };
+        targetField = 'rewards';
+      } else if (parent === 'penalties') {
+        currentValue = editedScene.actions[actionName].penalties[child];
+        updatedValue = {
+          ...editedScene.actions[actionName].penalties,
+          [child]: value
+        };
+        targetField = 'penalties';
+      }
+    } else {
+      currentValue = editedScene.actions[actionName][field];
+    }
+
+    if (JSON.stringify(value) !== JSON.stringify(currentValue)) {
       const updated = {
         ...editedScene,
         actions: {
           ...editedScene.actions,
           [actionName]: {
             ...editedScene.actions[actionName],
-            [field]: value
+            [targetField]: updatedValue
           }
         }
       };
@@ -291,6 +323,16 @@ const SceneNode = React.memo(({
     } else if (e.key === 'Escape') {
       setSceneName(id);
       setIsEditingName(false);
+    }
+  };
+
+  // Add this helper function inside SceneNode component
+  const handleNumberChange = (actionName, field, value, isButton = false) => {
+    handleLocalActionChange(actionName, field, value);
+    
+    // If change came from increment/decrement buttons, save immediately
+    if (isButton) {
+      handleActionBlur(actionName, field, value);
     }
   };
 
@@ -454,8 +496,8 @@ const SceneNode = React.memo(({
                             onChange={(e) => {
                               const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
                               handleLocalActionChange(actionName, 'dice_bypass_items', selectedOptions);
+                              handleActionBlur(actionName, 'dice_bypass_items', selectedOptions);
                             }}
-                            onBlur={(e) => handleActionBlur(actionName, 'dice_bypass_items', Array.from(e.target.selectedOptions, option => option.value))}
                             className="w-full p-1 border rounded text-sm"
                             size={3}
                           >
@@ -474,8 +516,8 @@ const SceneNode = React.memo(({
                             onChange={(e) => {
                               const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
                               handleLocalActionChange(actionName, 'rewards.items', selectedOptions);
+                              handleActionBlur(actionName, 'rewards.items', selectedOptions);
                             }}
-                            onBlur={(e) => handleActionBlur(actionName, 'rewards.items', Array.from(e.target.selectedOptions, option => option.value))}
                             className="w-full p-1 border rounded text-sm"
                             size={3}
                           >
@@ -491,7 +533,10 @@ const SceneNode = React.memo(({
                           <input
                             type="number"
                             value={action.oxygen_change}
-                            onChange={(e) => handleLocalActionChange(actionName, 'oxygen_change', parseInt(e.target.value))}
+                            onChange={(e) => {
+                              const isButton = e.nativeEvent.inputType === 'insertReplacementText';
+                              handleNumberChange(actionName, 'oxygen_change', parseInt(e.target.value), isButton);
+                            }}
                             onBlur={(e) => handleActionBlur(actionName, 'oxygen_change', parseInt(e.target.value))}
                             className="w-full p-1 border rounded text-sm"
                           />
@@ -501,7 +546,10 @@ const SceneNode = React.memo(({
                           <input
                             type="number"
                             value={action.health_change}
-                            onChange={(e) => handleLocalActionChange(actionName, 'health_change', parseInt(e.target.value))}
+                            onChange={(e) => {
+                              const isButton = e.nativeEvent.inputType === 'insertReplacementText';
+                              handleNumberChange(actionName, 'health_change', parseInt(e.target.value), isButton);
+                            }}
                             onBlur={(e) => handleActionBlur(actionName, 'health_change', parseInt(e.target.value))}
                             className="w-full p-1 border rounded text-sm"
                           />
@@ -516,7 +564,10 @@ const SceneNode = React.memo(({
                               <input
                                 type="number"
                                 value={action.penalties.oxygen_loss}
-                                onChange={(e) => handleLocalActionChange(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
+                                onChange={(e) => {
+                                  const isButton = e.nativeEvent.inputType === 'insertReplacementText';
+                                  handleNumberChange(actionName, 'penalties.oxygen_loss', parseInt(e.target.value), isButton);
+                                }}
                                 onBlur={(e) => handleActionBlur(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
                                 className="w-full p-1 border rounded text-sm"
                               />
@@ -526,7 +577,10 @@ const SceneNode = React.memo(({
                               <input
                                 type="number"
                                 value={action.penalties.health_loss}
-                                onChange={(e) => handleLocalActionChange(actionName, 'penalties.health_loss', parseInt(e.target.value))}
+                                onChange={(e) => {
+                                  const isButton = e.nativeEvent.inputType === 'insertReplacementText';
+                                  handleNumberChange(actionName, 'penalties.health_loss', parseInt(e.target.value), isButton);
+                                }}
                                 onBlur={(e) => handleActionBlur(actionName, 'penalties.health_loss', parseInt(e.target.value))}
                                 className="w-full p-1 border rounded text-sm"
                               />
@@ -550,6 +604,21 @@ const SceneNode = React.memo(({
 
 // Add display names for memo components
 SceneNode.displayName = 'SceneNode';
+
+// Add PropTypes for SceneNode component
+SceneNode.propTypes = {
+  data: PropTypes.object.isRequired,
+  id: PropTypes.string.isRequired,
+  onSave: PropTypes.func.isRequired,
+  allScenes: PropTypes.arrayOf(PropTypes.string).isRequired,
+  isCollapsed: PropTypes.bool.isRequired,
+  onCollapse: PropTypes.func.isRequired,
+  onRenameScene: PropTypes.func.isRequired,
+  onDeleteScene: PropTypes.func.isRequired,
+  canDelete: PropTypes.bool.isRequired,
+  narrativeState: PropTypes.object.isRequired,
+  isSceneReferenced: PropTypes.func.isRequired
+};
 
 // Add this new component to manage history
 const useHistoryStack = (initialState, maxHistory = 100) => {
@@ -633,12 +702,12 @@ const useHistoryStack = (initialState, maxHistory = 100) => {
 
 const Notification = ({ message, onHide }) => {
   useEffect(() => {
-    const timer = setTimeout(onHide, 2000); // Hide after 2 seconds
+    const timer = setTimeout(onHide, 2000);
     return () => clearTimeout(timer);
   }, [onHide]);
 
   return (
-    <div className="fixed top-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg animate-fade-in-out">
+    <div className="fixed top-24 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg animate-fade-in-out">
       {message}
     </div>
   );
@@ -667,7 +736,6 @@ const CustomNode = React.memo(function CustomNode(props) {
     id,
   } = props;
 
-  // Extract all the needed props from data
   const {
     onSave,
     allScenes,
@@ -675,16 +743,14 @@ const CustomNode = React.memo(function CustomNode(props) {
     onCollapse,
     onRenameScene,
     onDeleteScene,
-    canDelete,
     narrativeState,
     originalId,
     isSceneReferenced
   } = data;
 
+  // Evaluate isCollapsed here instead of passing the function
   const nodeId = originalId || id;
-  const nodeIsCollapsed = typeof isCollapsed === 'function' 
-    ? isCollapsed(nodeId)
-    : isCollapsed;
+  const isNodeCollapsed = typeof isCollapsed === 'function' ? isCollapsed(nodeId) : false;
 
   // Create a wrapped onCollapse function that includes the node ID
   const handleCollapse = (collapsed) => {
@@ -697,11 +763,11 @@ const CustomNode = React.memo(function CustomNode(props) {
       id={nodeId}
       onSave={onSave}
       allScenes={allScenes}
-      isCollapsed={nodeIsCollapsed}
+      isCollapsed={isNodeCollapsed}
       onCollapse={handleCollapse}
       onRenameScene={onRenameScene}
       onDeleteScene={onDeleteScene}
-      canDelete={canDelete}
+      canDelete={!isSceneReferenced(nodeId)}
       narrativeState={narrativeState}
       isSceneReferenced={isSceneReferenced}
     />
@@ -710,6 +776,27 @@ const CustomNode = React.memo(function CustomNode(props) {
 
 // Add display names for memo components
 CustomNode.displayName = 'CustomNode';
+
+// Update CustomNode PropTypes
+CustomNode.propTypes = {
+  data: PropTypes.shape({
+    originalId: PropTypes.string.isRequired,
+    onSave: PropTypes.func.isRequired,
+    allScenes: PropTypes.arrayOf(PropTypes.string).isRequired,
+    onCollapse: PropTypes.func.isRequired,
+    onRenameScene: PropTypes.func.isRequired,
+    onDeleteScene: PropTypes.func.isRequired,
+    narrativeState: PropTypes.object.isRequired,
+    isSceneReferenced: PropTypes.func.isRequired
+  }).isRequired,
+  id: PropTypes.string.isRequired
+};
+
+// Update Notification PropTypes
+Notification.propTypes = {
+  message: PropTypes.string.isRequired,
+  onHide: PropTypes.func.isRequired
+};
 
 // Define nodeTypes as a constant outside
 const nodeTypes = {
@@ -1118,7 +1205,6 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     onCollapse: handleNodeCollapse,
     onRenameScene: handleRenameScene,
     onDeleteScene: handleDeleteScene,
-    canDelete: (id) => !isSceneReferenced(id),
     narrativeState,
     isSceneReferenced
   }), [
@@ -1287,21 +1373,5 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
 
 // Add display names for memo components
 NarrativeFlowEditor.displayName = 'NarrativeFlowEditor';
-
-CustomNode.propTypes = {
-  data: PropTypes.shape({
-    originalId: PropTypes.string,
-    onSave: PropTypes.func,
-    allScenes: PropTypes.arrayOf(PropTypes.string),
-    isCollapsed: PropTypes.bool,
-    onCollapse: PropTypes.func,
-    onRenameScene: PropTypes.func,
-    onDeleteScene: PropTypes.func,
-    canDelete: PropTypes.func,
-    narrativeState: PropTypes.object,
-    isSceneReferenced: PropTypes.func
-  }).isRequired,
-  id: PropTypes.string.isRequired
-};
 
 export default NarrativeFlowEditor; 
