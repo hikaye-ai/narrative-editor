@@ -68,7 +68,11 @@ export const createNodesAndEdges = (scenes, store) => {
           toggleNodeCollapse: store.toggleNodeCollapse.bind(store),
           isNodeCollapsed: store.isNodeCollapsed.bind(store),
           getNarrative: () => store.narrative,
-          getAllScenes: () => store.narrative.chapters[0].scenes
+          getAllScenes: () => store.narrative.chapters[0].scenes,
+          isActionCollapsed: store.isActionCollapsed.bind(store),
+          toggleActionCollapse: store.toggleActionCollapse.bind(store),
+          sceneOptions: store.sceneOptions,
+          itemOptions: store.itemOptions
         }
       },
       position: scene.position || { x: 0, y: 0 },

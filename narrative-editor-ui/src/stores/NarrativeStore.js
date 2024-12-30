@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction, toJS } from 'mobx';
+import { makeAutoObservable, runInAction, toJS, computed } from 'mobx';
 import { createNodesAndEdges, getLayoutedElements } from '../utils/flowUtils';
 
 class NarrativeStore {
@@ -6,6 +6,7 @@ class NarrativeStore {
   nodes = [];
   edges = [];
   collapsedNodes = new Set();
+  collapsedActions = new Set();
   notification = null;
   focusedNodeId = null;
   reactFlowInstance = null;
@@ -14,6 +15,8 @@ class NarrativeStore {
   maxHistory = 100;
 
   constructor(initialNarrative) {
+    console.log('NarrativeStore constructor:', initialNarrative);
+    
     makeAutoObservable(this, {
       isSceneReferenced: false,
       saveScene: false,
@@ -22,6 +25,10 @@ class NarrativeStore {
       toggleNodeCollapse: false,
       getNarrative: false,
       getAllScenes: false,
+      sceneOptions: computed,
+      itemOptions: computed,
+      isActionCollapsed: false,
+      toggleActionCollapse: false,
     });
     
     // Bind methods that will be passed to components
@@ -32,11 +39,14 @@ class NarrativeStore {
     this.toggleNodeCollapse = this.toggleNodeCollapse.bind(this);
     this.getNarrative = this.getNarrative.bind(this);
     this.getAllScenes = this.getAllScenes.bind(this);
+    this.isActionCollapsed = this.isActionCollapsed.bind(this);
+    this.toggleActionCollapse = this.toggleActionCollapse.bind(this);
     
     this.loadInitialState(initialNarrative);
   }
 
   loadInitialState(initialNarrative) {
+    console.log('loadInitialState called with:', initialNarrative);
     // Load history from localStorage or use initial narrative
     try {
       const savedHistory = localStorage.getItem('narrativeEditorHistory');
@@ -64,9 +74,19 @@ class NarrativeStore {
   updateNodesAndEdges() {
     const chapter = this.narrative.chapters[0];
     const { nodes, edges } = createNodesAndEdges(chapter.scenes, this);
-    console.log('Updating nodes and edges:', { nodes, edges });
+    console.log('updateNodesAndEdges called:', { nodes, edges });
     this.nodes = nodes;
     this.edges = edges;
+
+    // Initialize all nodes as collapsed
+    nodes.forEach(node => {
+      this.collapsedNodes.add(node.id);
+      // Initialize all actions as collapsed
+      const scene = chapter.scenes[node.id];
+      Object.keys(scene.actions || {}).forEach(actionName => {
+        this.collapsedActions.add(`${node.id}:${actionName}`);
+      });
+    });
   }
 
   setReactFlowInstance(instance) {
@@ -296,13 +316,11 @@ class NarrativeStore {
         if (change.type === 'position' || change.type === 'dimensions') {
           const nodeIndex = this.nodes.findIndex(n => n.id === change.id);
           if (nodeIndex !== -1) {
-            const updatedNode = { ...toJS(this.nodes[nodeIndex]) };
             if (change.type === 'position') {
-              updatedNode.position = change.position;
+              this.nodes[nodeIndex].position = change.position;
             } else {
-              updatedNode.dimensions = change.dimensions;
+              this.nodes[nodeIndex].dimensions = change.dimensions;
             }
-            this.nodes[nodeIndex] = updatedNode;
           }
         }
       });
@@ -317,11 +335,7 @@ class NarrativeStore {
         } else if (change.type === 'select') {
           const edgeIndex = this.edges.findIndex(e => e.id === change.id);
           if (edgeIndex !== -1) {
-            const updatedEdge = {
-              ...toJS(this.edges[edgeIndex]),
-              selected: change.selected
-            };
-            this.edges[edgeIndex] = updatedEdge;
+            this.edges[edgeIndex].selected = change.selected;
           }
         }
       });
@@ -334,6 +348,62 @@ class NarrativeStore {
 
   getAllScenes() {
     return this.narrative.chapters[0].scenes;
+  }
+
+  get sceneOptions() {
+    const scenes = this.getAllScenes();
+    return Object.keys(scenes).map(sceneId => ({ value: sceneId, label: sceneId }));
+  }
+
+  get itemOptions() {
+    const items = new Set();
+    
+    this.narrative.chapters.forEach(chapter => {
+      Object.values(chapter.scenes).forEach(scene => {
+        Object.values(scene.actions).forEach(action => {
+          if (action.rewards?.items) {
+            action.rewards.items.forEach(item => items.add(item));
+          }
+          if (action.dice_bypass_items) {
+            action.dice_bypass_items.forEach(item => items.add(item));
+          }
+        });
+      });
+    });
+
+    return Array.from(items)
+      .sort((a, b) => a.localeCompare(b))
+      .map(item => ({ value: item, label: item }));
+  }
+
+  isActionCollapsed(sceneId, actionName) {
+    return this.collapsedActions.has(`${sceneId}:${actionName}`);
+  }
+
+  toggleActionCollapse(sceneId, actionName) {
+    const key = `${sceneId}:${actionName}`;
+    if (this.collapsedActions.has(key)) {
+      this.collapsedActions.delete(key);
+    } else {
+      this.collapsedActions.add(key);
+    }
+  }
+
+  getStoreActions() {
+    return {
+      saveScene: this.saveScene,
+      deleteScene: this.deleteScene,
+      renameScene: this.renameScene,
+      isSceneReferenced: this.isSceneReferenced,
+      toggleNodeCollapse: this.toggleNodeCollapse,
+      getNarrative: this.getNarrative,
+      getAllScenes: this.getAllScenes,
+      isActionCollapsed: this.isActionCollapsed,
+      toggleActionCollapse: this.toggleActionCollapse,
+      sceneOptions: this.sceneOptions,
+      itemOptions: this.itemOptions,
+      isNodeCollapsed: this.isNodeCollapsed,
+    };
   }
 }
 

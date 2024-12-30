@@ -11,8 +11,6 @@ import ReactFlow, {
   BezierEdge,
   SmoothStepEdge,
 } from 'reactflow';
-import Select from 'react-select';
-import Creatable from 'react-select/creatable';
 import 'reactflow/dist/style.css';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -21,7 +19,6 @@ import RedoIcon from '@mui/icons-material/Redo';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import RestoreIcon from '@mui/icons-material/Restore';
 
 // Constants
 const DICE_CHECK_OPTIONS = [
@@ -74,7 +71,9 @@ const Notification = observer(({ store }) => {
 const SceneNode = observer(function SceneNode({ data, id }) {
   // Convert the observable data to plain JS, excluding storeActions
   const { storeActions, ...sceneData } = data;
-  const plainData = React.useMemo(() => toJS(sceneData), [sceneData]);
+  console.log('SceneNode data:', { storeActions, sceneData, id });
+
+  const plainData = toJS(sceneData);
   const [editedScene, setEditedScene] = React.useState(plainData);
   const [localScene, setLocalScene] = React.useState(plainData);
   const [newActionName, setNewActionName] = React.useState('');
@@ -87,25 +86,15 @@ const SceneNode = observer(function SceneNode({ data, id }) {
     return null;
   }
 
-  // Get all scenes for options
-  const sceneOptions = React.useMemo(() => {
-    const scenes = storeActions.getAllScenes();
-    return Object.keys(scenes).map(sceneId => ({ value: sceneId, label: sceneId }));
-  }, [storeActions]);
+  // Add debugging for store actions
+  console.log('Store actions methods:', Object.keys(storeActions));
 
-  // Get items for options
-  const itemOptions = React.useMemo(() => {
-    const narrative = storeActions.getNarrative();
-    return extractUniqueItems(narrative);
-  }, [storeActions]);
+  // Replace useMemo with computed values from store
+  const sceneOptions = storeActions.sceneOptions || [];
+  const itemOptions = storeActions.itemOptions || [];
 
-  // Update effect to use plain data
-  React.useEffect(() => {
-    const { storeActions: _, ...newSceneData } = data;
-    const plainNewData = toJS(newSceneData);
-    setEditedScene(plainNewData);
-    setLocalScene(plainNewData);
-  }, [data]);
+  // Get the initial collapsed state from the store
+  const isCollapsed = storeActions.isNodeCollapsed(id);
 
   const handleLocalChange = (field, value) => {
     setLocalScene(prev => ({
@@ -238,7 +227,205 @@ const SceneNode = observer(function SceneNode({ data, id }) {
     }
   };
 
-  const isCollapsed = storeActions.isNodeCollapsed(id);
+  const renderAction = (actionName, action) => {
+    const isActionCollapsed = storeActions.isActionCollapsed(id, actionName);
+
+    return (
+      <div key={actionName} className="border rounded p-2 text-sm">
+        {/* Action header */}
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => storeActions.toggleActionCollapse(id, actionName)}
+              className="p-1 hover:bg-gray-200 rounded"
+            >
+              {isActionCollapsed ? (
+                <ExpandMoreIcon className="w-4 h-4" />
+              ) : (
+                <ExpandLessIcon className="w-4 h-4" />
+              )}
+            </button>
+            <span className="font-medium">{actionName}</span>
+          </div>
+          <button
+            onClick={() => deleteAction(actionName)}
+            className="text-red-500 hover:text-red-700 text-xs"
+          >
+            Delete
+          </button>
+        </div>
+
+        {/* Collapsed view */}
+        {isActionCollapsed ? (
+          <div className="text-gray-600 text-sm pl-6">
+            Next Scene: {action.next_scene || 'None'}
+            {action.dice_check && ` | Check: ${action.dice_check}`}
+            {action.oxygen_change !== 0 && ` | O₂: ${action.oxygen_change}`}
+            {action.health_change !== 0 && ` | HP: ${action.health_change}`}
+          </div>
+        ) : (
+          /* Existing action fields */
+          <div className="grid grid-cols-2 gap-2">
+            <div className="relative">
+              <label className="block text-xs font-medium mb-1">Next Scene</label>
+              <select
+                value={action.next_scene || ''}
+                onChange={(e) => handleLocalActionChange(actionName, 'next_scene', e.target.value)}
+                onBlur={(e) => handleActionBlur(actionName, 'next_scene', e.target.value)}
+                className="w-full p-1 border rounded text-sm"
+              >
+                <option value="">Select next scene...</option>
+                {sceneOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Dice Check</label>
+              <select
+                value={action.dice_check || ''}
+                onChange={(e) => handleLocalActionChange(actionName, 'dice_check', e.target.value || null)}
+                onBlur={(e) => handleActionBlur(actionName, 'dice_check', e.target.value || null)}
+                className="w-full p-1 border rounded text-sm"
+              >
+                {DICE_CHECK_OPTIONS.map(option => (
+                  <option key={option.value || 'null'} value={option.value || ''}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Dice Bypass Items</label>
+              <select
+                multiple
+                value={action.dice_bypass_items || []}
+                onChange={(e) => {
+                  const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                  handleLocalActionChange(actionName, 'dice_bypass_items', selectedOptions);
+                }}
+                onBlur={(e) => handleActionBlur(actionName, 'dice_bypass_items', Array.from(e.target.selectedOptions, option => option.value))}
+                className="w-full p-1 border rounded text-sm"
+                size={3}
+              >
+                {itemOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Reward Items</label>
+              <select
+                multiple
+                value={action.rewards?.items || []}
+                onChange={(e) => {
+                  const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                  handleLocalActionChange(actionName, 'rewards.items', selectedOptions);
+                }}
+                onBlur={(e) => handleActionBlur(actionName, 'rewards.items', Array.from(e.target.selectedOptions, option => option.value))}
+                className="w-full p-1 border rounded text-sm"
+                size={3}
+              >
+                {itemOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Oxygen Change</label>
+              <input
+                type="number"
+                value={action.oxygen_change}
+                onChange={(e) => handleLocalActionChange(actionName, 'oxygen_change', parseInt(e.target.value))}
+                onBlur={(e) => handleActionBlur(actionName, 'oxygen_change', parseInt(e.target.value))}
+                className="w-full p-1 border rounded text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Health Change</label>
+              <input
+                type="number"
+                value={action.health_change}
+                onChange={(e) => handleLocalActionChange(actionName, 'health_change', parseInt(e.target.value))}
+                onBlur={(e) => handleActionBlur(actionName, 'health_change', parseInt(e.target.value))}
+                className="w-full p-1 border rounded text-sm"
+              />
+            </div>
+
+            {/* Penalties Section */}
+            <div className="col-span-2 border-t mt-2 pt-2">
+              <h4 className="text-xs font-medium mb-2">Dice Check Failure Penalties</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Oxygen Loss</label>
+                  <input
+                    type="number"
+                    value={action.penalties?.oxygen_loss || 0}
+                    onChange={(e) => handleLocalActionChange(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
+                    onBlur={(e) => handleActionBlur(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
+                    className="w-full p-1 border rounded text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Health Loss</label>
+                  <input
+                    type="number"
+                    value={action.penalties?.health_loss || 0}
+                    onChange={(e) => handleLocalActionChange(actionName, 'penalties.health_loss', parseInt(e.target.value))}
+                    onBlur={(e) => handleActionBlur(actionName, 'penalties.health_loss', parseInt(e.target.value))}
+                    className="w-full p-1 border rounded text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Rewards Section */}
+            <div className="col-span-2 border-t mt-2 pt-2">
+              <h4 className="text-xs font-medium mb-2">Additional Rewards</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Oxygen Gain</label>
+                  <input
+                    type="number"
+                    value={action.rewards?.oxygen_gain || 0}
+                    onChange={(e) => handleLocalActionChange(actionName, 'rewards.oxygen_gain', parseInt(e.target.value))}
+                    onBlur={(e) => handleActionBlur(actionName, 'rewards.oxygen_gain', parseInt(e.target.value))}
+                    className="w-full p-1 border rounded text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Health Gain</label>
+                  <input
+                    type="number"
+                    value={action.rewards?.health_gain || 0}
+                    onChange={(e) => handleLocalActionChange(actionName, 'rewards.health_gain', parseInt(e.target.value))}
+                    onBlur={(e) => handleActionBlur(actionName, 'rewards.health_gain', parseInt(e.target.value))}
+                    className="w-full p-1 border rounded text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">XP Gain</label>
+                  <input
+                    type="number"
+                    value={action.rewards?.xp_gain || 0}
+                    onChange={(e) => handleLocalActionChange(actionName, 'rewards.xp_gain', parseInt(e.target.value))}
+                    onBlur={(e) => handleActionBlur(actionName, 'rewards.xp_gain', parseInt(e.target.value))}
+                    className="w-full p-1 border rounded text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -348,178 +535,9 @@ const SceneNode = observer(function SceneNode({ data, id }) {
                 </div>
 
                 <div className="space-y-3">
-                  {Object.entries(localScene.actions).map(([actionName, action]) => (
-                    <div key={actionName} className="border rounded p-2 text-sm">
-                      {/* Action content */}
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium">{actionName}</span>
-                        <button
-                          onClick={() => deleteAction(actionName)}
-                          className="text-red-500 hover:text-red-700 text-xs"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                      {/* Action fields */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <label className="block text-xs font-medium mb-1">Next Scene</label>
-                          <select
-                            value={action.next_scene || ''}
-                            onChange={(e) => handleLocalActionChange(actionName, 'next_scene', e.target.value)}
-                            onBlur={(e) => handleActionBlur(actionName, 'next_scene', e.target.value)}
-                            className="w-full p-1 border rounded text-sm"
-                          >
-                            <option value="">Select next scene...</option>
-                            {sceneOptions.map(option => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-1">Dice Check</label>
-                          <select
-                            value={action.dice_check || ''}
-                            onChange={(e) => handleLocalActionChange(actionName, 'dice_check', e.target.value || null)}
-                            onBlur={(e) => handleActionBlur(actionName, 'dice_check', e.target.value || null)}
-                            className="w-full p-1 border rounded text-sm"
-                          >
-                            {DICE_CHECK_OPTIONS.map(option => (
-                              <option key={option.value || 'null'} value={option.value || ''}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-1">Dice Bypass Items</label>
-                          <select
-                            multiple
-                            value={action.dice_bypass_items || []}
-                            onChange={(e) => {
-                              const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                              handleLocalActionChange(actionName, 'dice_bypass_items', selectedOptions);
-                            }}
-                            onBlur={(e) => handleActionBlur(actionName, 'dice_bypass_items', Array.from(e.target.selectedOptions, option => option.value))}
-                            className="w-full p-1 border rounded text-sm"
-                            size={3}
-                          >
-                            {itemOptions.map(option => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-1">Reward Items</label>
-                          <select
-                            multiple
-                            value={action.rewards?.items || []}
-                            onChange={(e) => {
-                              const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                              handleLocalActionChange(actionName, 'rewards.items', selectedOptions);
-                            }}
-                            onBlur={(e) => handleActionBlur(actionName, 'rewards.items', Array.from(e.target.selectedOptions, option => option.value))}
-                            className="w-full p-1 border rounded text-sm"
-                            size={3}
-                          >
-                            {itemOptions.map(option => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-1">Oxygen Change</label>
-                          <input
-                            type="number"
-                            value={action.oxygen_change}
-                            onChange={(e) => handleLocalActionChange(actionName, 'oxygen_change', parseInt(e.target.value))}
-                            onBlur={(e) => handleActionBlur(actionName, 'oxygen_change', parseInt(e.target.value))}
-                            className="w-full p-1 border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-1">Health Change</label>
-                          <input
-                            type="number"
-                            value={action.health_change}
-                            onChange={(e) => handleLocalActionChange(actionName, 'health_change', parseInt(e.target.value))}
-                            onBlur={(e) => handleActionBlur(actionName, 'health_change', parseInt(e.target.value))}
-                            className="w-full p-1 border rounded text-sm"
-                          />
-                        </div>
-
-                        {/* Penalties Section */}
-                        <div className="col-span-2 border-t mt-2 pt-2">
-                          <h4 className="text-xs font-medium mb-2">Dice Check Failure Penalties</h4>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="block text-xs font-medium mb-1">Oxygen Loss</label>
-                              <input
-                                type="number"
-                                value={action.penalties?.oxygen_loss || 0}
-                                onChange={(e) => handleLocalActionChange(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
-                                onBlur={(e) => handleActionBlur(actionName, 'penalties.oxygen_loss', parseInt(e.target.value))}
-                                className="w-full p-1 border rounded text-sm"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium mb-1">Health Loss</label>
-                              <input
-                                type="number"
-                                value={action.penalties?.health_loss || 0}
-                                onChange={(e) => handleLocalActionChange(actionName, 'penalties.health_loss', parseInt(e.target.value))}
-                                onBlur={(e) => handleActionBlur(actionName, 'penalties.health_loss', parseInt(e.target.value))}
-                                className="w-full p-1 border rounded text-sm"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Rewards Section */}
-                        <div className="col-span-2 border-t mt-2 pt-2">
-                          <h4 className="text-xs font-medium mb-2">Additional Rewards</h4>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="block text-xs font-medium mb-1">Oxygen Gain</label>
-                              <input
-                                type="number"
-                                value={action.rewards?.oxygen_gain || 0}
-                                onChange={(e) => handleLocalActionChange(actionName, 'rewards.oxygen_gain', parseInt(e.target.value))}
-                                onBlur={(e) => handleActionBlur(actionName, 'rewards.oxygen_gain', parseInt(e.target.value))}
-                                className="w-full p-1 border rounded text-sm"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium mb-1">Health Gain</label>
-                              <input
-                                type="number"
-                                value={action.rewards?.health_gain || 0}
-                                onChange={(e) => handleLocalActionChange(actionName, 'rewards.health_gain', parseInt(e.target.value))}
-                                onBlur={(e) => handleActionBlur(actionName, 'rewards.health_gain', parseInt(e.target.value))}
-                                className="w-full p-1 border rounded text-sm"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium mb-1">XP Gain</label>
-                              <input
-                                type="number"
-                                value={action.rewards?.xp_gain || 0}
-                                onChange={(e) => handleLocalActionChange(actionName, 'rewards.xp_gain', parseInt(e.target.value))}
-                                onBlur={(e) => handleActionBlur(actionName, 'rewards.xp_gain', parseInt(e.target.value))}
-                                className="w-full p-1 border rounded text-sm"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                  {Object.entries(localScene.actions).map(([actionName, action]) => 
+                    renderAction(actionName, action)
+                  )}
                 </div>
               </div>
             </div>
@@ -532,30 +550,53 @@ const SceneNode = observer(function SceneNode({ data, id }) {
   );
 });
 
-// Define node types
-const nodeTypes = {
-  custom: SceneNode
-};
-
-// Define edge types (removed Step)
-const edgeTypes = {
-  bezier: BezierEdge,
-  smoothstep: SmoothStepEdge,
-};
-
 const NarrativeFlowEditor = observer(function NarrativeFlowEditor({ store }) {
-  // Convert observable arrays to plain JS objects
+  // Convert observable arrays to plain JS objects right before passing to ReactFlow
   const nodes = React.useMemo(() => toJS(store.nodes), [store.nodes]);
   const edges = React.useMemo(() => toJS(store.edges), [store.edges]);
 
-  console.log('Rendering NarrativeFlowEditor with:', { nodes, edges });
+  console.log('NarrativeFlowEditor render:', { nodes, edges });
+
+  React.useEffect(() => {
+    console.log('NarrativeFlowEditor mounted');
+    return () => console.log('NarrativeFlowEditor unmounted');
+  }, []);
 
   const onInit = React.useCallback((instance) => {
+    console.log('ReactFlow onInit called');
     store.setReactFlowInstance(instance);
     setTimeout(() => {
       instance.fitView({ padding: 0.2 });
     }, 0);
   }, [store]);
+
+  // Memoize the node types to prevent unnecessary re-renders
+  const nodeTypes = React.useMemo(() => {
+    console.log('Creating nodeTypes');
+    return {
+      custom: SceneNode
+    };
+  }, []);
+
+  // Memoize the edge types
+  const edgeTypes = React.useMemo(() => {
+    console.log('Creating edgeTypes');
+    return {
+      bezier: BezierEdge,
+      smoothstep: SmoothStepEdge,
+    };
+  }, []);
+
+  if (!nodes || !edges) {
+    console.log('No nodes or edges available');
+    return null;
+  }
+
+  // Ensure all node data is also plain JS
+  const plainNodes = nodes.map(node => ({
+    ...node,
+    data: toJS(node.data)
+  }));
 
   return (
     <div className="w-full h-full bg-gray-100" style={{ height: 'calc(100vh - 64px)' }}>
@@ -599,7 +640,7 @@ const NarrativeFlowEditor = observer(function NarrativeFlowEditor({ store }) {
       <Notification store={store} />
 
       <ReactFlow
-        nodes={nodes}
+        nodes={plainNodes}
         edges={edges}
         onNodesChange={(changes) => store.updateNodes(changes)}
         onEdgesChange={(changes) => store.updateEdges(changes)}
