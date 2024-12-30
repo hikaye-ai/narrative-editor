@@ -5,6 +5,7 @@ import RedoIcon from '@mui/icons-material/Redo';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import RestoreIcon from '@mui/icons-material/Restore';
 import AddIcon from '@mui/icons-material/Add';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { deleteDatabase } from '../utils/indexedDB';
 
 export const EditorToolbar = ({
@@ -15,6 +16,7 @@ export const EditorToolbar = ({
   clearHistory,
   onRevertAll,
   onAddScene,
+  onAutoLayout
 }) => {
   const handleClearHistory = () => {
     if (window.confirm('Are you sure you want to clear all history? This cannot be undone.')) {
@@ -76,6 +78,13 @@ export const EditorToolbar = ({
       >
         <AddIcon className="w-3 h-3" />
       </button>
+      <button
+        onClick={onAutoLayout}
+        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1"
+        title=""
+      >
+        <AutorenewIcon className="w-4 h-4" />
+      </button>
     </div>
   );
 };
@@ -88,4 +97,5 @@ EditorToolbar.propTypes = {
   clearHistory: PropTypes.func.isRequired,
   onRevertAll: PropTypes.func.isRequired,
   onAddScene: PropTypes.func.isRequired,
+  onAutoLayout: PropTypes.func.isRequired
 }; 

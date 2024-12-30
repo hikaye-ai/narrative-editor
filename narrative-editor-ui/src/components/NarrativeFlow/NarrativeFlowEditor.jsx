@@ -8,7 +8,7 @@ import ReactFlow, {
 } from 'reactflow';
 import PropTypes from 'prop-types';
 import { useHistoryStack } from './hooks/useHistoryStack';
-import { getLayoutedElements, getViewportCenter, extractUniqueItems } from './utils/flowUtils';
+import { getLayoutedElements, getViewportCenter, extractUniqueItems, focusOnNode } from './utils/flowUtils';
 import { MINIMAP_STYLE } from './constants';
 import { Notification } from './components/Notification';
 import { EditorToolbar } from './components/EditorToolbar';
@@ -42,6 +42,26 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
   
   const reactFlowInstance = useRef(null);
   const initialNarrative = useRef(narrative);
+
+  // Define the function using function declaration
+  const onSceneConnectionChange = useCallback((nodeId, actionIndex, newTargetId) => {
+    setNodes((nds) => {
+      const newNodes = nds.map((node) => {
+        if (node.id === nodeId) {
+          const newData = { ...node.data };
+          if (!newData.actions) newData.actions = {};
+          newData.actions[actionIndex].next_scene = newTargetId;
+          return { ...node, data: newData };
+        }
+        return node;
+      });
+      
+      // Focus on the newly connected node after the update
+      setTimeout(() => focusOnNode(newTargetId, reactFlowInstance.current), 100);
+      
+      return newNodes;
+    });
+  }, []);
 
   // Handle node collapse
   const handleNodeCollapse = useCallback((nodeId, isCollapsed) => {
@@ -229,23 +249,29 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     const scenes = chapter.scenes;
     
     // Create nodes
-    const newNodes = Object.entries(scenes).map(([id, scene]) => ({
-      id,
-      type: 'custom',
-      data: {
-        ...scene,
-        onSave: handleSaveScene,
-        allScenes: Object.keys(scenes),
-        isCollapsed: (nodeId) => collapsedNodes.has(nodeId),
-        onCollapse: handleNodeCollapse,
-        onRenameScene: handleRenameScene,
-        onDeleteScene: handleDeleteScene,
-        narrativeState,
-        isSceneReferenced,
-        originalId: id
-      },
-      position: scene.position || { x: 0, y: 0 }
-    }));
+    const newNodes = Object.entries(scenes).map(([id, scene]) => {
+      const existingNode = nodes.find(n => n.id === id);
+      const position = existingNode?.position || scene.position || { x: 0, y: 0 };
+      
+      return {
+        id,
+        type: 'custom',
+        position,
+        data: {
+          ...scene,
+          onSave: handleSaveScene,
+          allScenes: Object.keys(scenes),
+          isCollapsed: (nodeId) => collapsedNodes.has(nodeId),
+          onCollapse: handleNodeCollapse,
+          onRenameScene: handleRenameScene,
+          onDeleteScene: handleDeleteScene,
+          onSceneConnectionChange,
+          narrativeState,
+          isSceneReferenced,
+          originalId: id
+        }
+      };
+    });
 
     // Create edges from actions
     const newEdges = [];
@@ -270,13 +296,18 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
       });
     });
 
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      newNodes,
-      newEdges
-    );
-
-    setNodes(layoutedNodes);
-    setEdges(layoutedEdges);
+    // Only apply layout if nodes positions have not been set
+    if (nodes.length === 0) {
+      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+        newNodes,
+        newEdges
+      );
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
+    } else {
+      setNodes(newNodes);
+      setEdges(newEdges);
+    }
   }, [
     narrativeState,
     collapsedNodes,
@@ -284,7 +315,9 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     handleNodeCollapse,
     handleRenameScene,
     handleDeleteScene,
-    isSceneReferenced
+    isSceneReferenced,
+    onSceneConnectionChange,
+    nodes.length
   ]);
 
   useEffect(() => {
@@ -292,6 +325,17 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
       setIsLoading(false);
     }
   }, [narrativeState, narrative]);
+
+  // Add this near the other handler functions
+  const handleAutoLayout = useCallback(() => {
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      nodes,
+      edges
+    );
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+    setNotification('Layout reorganized');
+  }, [nodes, edges]);
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
@@ -309,6 +353,7 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
             clearHistory={handleClearHistory}
             onRevertAll={handleRevertAll}
             onAddScene={handleAddScene}
+            onAutoLayout={handleAutoLayout}
           />
 
           {notification && (

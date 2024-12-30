@@ -153,4 +153,17 @@ export const extractUniqueItems = (narrative) => {
   return Array.from(items)
     .sort((a, b) => a.localeCompare(b))
     .map(item => ({ value: item, label: item }));
+};
+
+export const focusOnNode = (nodeId, reactFlowInstance) => {
+  if (!nodeId || !reactFlowInstance) return;
+  
+  const node = reactFlowInstance.getNode(nodeId);
+  if (!node) return;
+
+  reactFlowInstance.setCenter(
+    node.position.x + node.width / 2,
+    node.position.y + node.height / 2,
+    { duration: 800, zoom: 1.5 }
+  );
 }; 

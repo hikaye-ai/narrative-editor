@@ -236,6 +236,26 @@ const SceneNode = React.memo(({
     });
   };
 
+  const handleActionChange = (actionIndex, field, value) => {
+    const newActions = [...data.actions];
+    newActions[actionIndex] = {
+      ...newActions[actionIndex],
+      [field]: value
+    };
+
+    // If changing the next scene, call onSceneConnectionChange
+    if (field === 'next_scene') {
+      data.onSceneConnectionChange(id, actionIndex, value);
+    }
+
+    const updatedScene = {
+      ...data,
+      actions: newActions
+    };
+    
+    data.onSave(id, updatedScene);
+  };
+
   return (
     <>
       <NodeResizer 
@@ -643,6 +663,7 @@ SceneNode.propTypes = {
     onCollapse: PropTypes.func.isRequired,
     onRenameScene: PropTypes.func.isRequired,
     onDeleteScene: PropTypes.func.isRequired,
+    onSceneConnectionChange: PropTypes.func.isRequired,
     narrativeState: PropTypes.object.isRequired,
     isSceneReferenced: PropTypes.func.isRequired,
     originalId: PropTypes.string.isRequired,
