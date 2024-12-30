@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import NarrativeFlowEditor from './components/NarrativeFlowEditor';
+import NarrativeFlowEditor from './components/NarrativeFlow/NarrativeFlowEditor';
 import narrative from '../narrative.json';
 
 function App() {
