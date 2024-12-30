@@ -30,7 +30,6 @@ function App() {
             {
               description: scene.description,
               location: scene.location,
-              position: scene.position,
               actions: Object.fromEntries(
                 Object.entries(scene.actions || {}).map(([actionId, action]) => [
                   actionId,
