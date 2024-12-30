@@ -38,6 +38,7 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [notification, setNotification] = useState(null);
   const [focusedNodeId, setFocusedNodeId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   const reactFlowInstance = useRef(null);
   const initialNarrative = useRef(narrative);
@@ -286,60 +287,74 @@ const NarrativeFlowEditor = ({ narrative, onSaveScene }) => {
     isSceneReferenced
   ]);
 
+  useEffect(() => {
+    if (narrativeState !== narrative) {
+      setIsLoading(false);
+    }
+  }, [narrativeState, narrative]);
+
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <EditorToolbar
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        clearHistory={handleClearHistory}
-        onRevertAll={handleRevertAll}
-        onAddScene={handleAddScene}
-      />
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          Loading...
+        </div>
+      ) : (
+        <>
+          <EditorToolbar
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            clearHistory={handleClearHistory}
+            onRevertAll={handleRevertAll}
+            onAddScene={handleAddScene}
+          />
 
-      {notification && (
-        <Notification 
-          message={notification} 
-          onHide={() => setNotification(null)} 
-        />
+          {notification && (
+            <Notification 
+              message={notification} 
+              onHide={() => setNotification(null)} 
+            />
+          )}
+
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodeTypes={nodeTypes}
+            onInit={onInit}
+            defaultViewport={{ x: 0, y: 0, zoom: 0.75 }}
+            minZoom={0.3}
+            maxZoom={1.5}
+            defaultEdgeOptions={{
+              type: 'default',
+              animated: true,
+              style: { stroke: '#2563eb' },
+              markerEnd: {
+                type: 'arrowclosed',
+                color: '#2563eb',
+              },
+            }}
+            fitView
+          >
+            <Background color="#aaa" gap={16} />
+            <Controls />
+            <MiniMap 
+              style={MINIMAP_STYLE}
+              nodeColor={() => '#2563eb'}
+              nodeStrokeWidth={3}
+              nodeStrokeColor="#fff"
+              nodeBorderRadius={2}
+              maskColor="rgb(0, 0, 0, 0.2)"
+              position="bottom-right"
+              zoomable
+              pannable
+            />
+          </ReactFlow>
+        </>
       )}
-
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        onInit={onInit}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.75 }}
-        minZoom={0.3}
-        maxZoom={1.5}
-        defaultEdgeOptions={{
-          type: 'default',
-          animated: true,
-          style: { stroke: '#2563eb' },
-          markerEnd: {
-            type: 'arrowclosed',
-            color: '#2563eb',
-          },
-        }}
-        fitView
-      >
-        <Background color="#aaa" gap={16} />
-        <Controls />
-        <MiniMap 
-          style={MINIMAP_STYLE}
-          nodeColor={() => '#2563eb'}
-          nodeStrokeWidth={3}
-          nodeStrokeColor="#fff"
-          nodeBorderRadius={2}
-          maskColor="rgb(0, 0, 0, 0.2)"
-          position="bottom-right"
-          zoomable
-          pannable
-        />
-      </ReactFlow>
     </div>
   );
 };

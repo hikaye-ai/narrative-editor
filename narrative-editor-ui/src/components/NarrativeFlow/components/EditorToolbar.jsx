@@ -5,6 +5,7 @@ import RedoIcon from '@mui/icons-material/Redo';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import RestoreIcon from '@mui/icons-material/Restore';
 import AddIcon from '@mui/icons-material/Add';
+import { deleteDatabase } from '../utils/indexedDB';
 
 export const EditorToolbar = ({
   canUndo,
@@ -18,6 +19,17 @@ export const EditorToolbar = ({
   const handleClearHistory = () => {
     if (window.confirm('Are you sure you want to clear all history? This cannot be undone.')) {
       clearHistory();
+    }
+  };
+
+  const handleResetDB = async () => {
+    if (window.confirm('Reset database? This will clear all saved history.')) {
+      try {
+        await deleteDatabase();
+        window.location.reload();
+      } catch (error) {
+        console.error('Error resetting database:', error);
+      }
     }
   };
 

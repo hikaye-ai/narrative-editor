@@ -1,78 +1,165 @@
 import { useState, useCallback, useEffect } from 'react';
+import { saveToDB, loadFromDB, deleteDatabase, closeDB } from '../utils/indexedDB';
 
-export const useHistoryStack = (initialState, maxHistory = 100) => {
-  const [current, setCurrent] = useState(() => {
-    try {
-      const saved = localStorage.getItem('narrativeEditorCurrent');
-      return saved ? parseInt(saved, 10) : 0;
-    } catch (error) {
-      console.error('Error loading current state:', error);
-      return 0;
-    }
-  });
-  
-  const [history, setHistory] = useState(() => {
-    try {
-      const saved = localStorage.getItem('narrativeEditorHistory');
-      return saved ? JSON.parse(saved) : [initialState];
-    } catch (error) {
-      console.error('Error loading history:', error);
-      return [initialState];
-    }
-  });
-  
-  const canUndo = current > 0;
-  const canRedo = current < history.length - 1;
-  
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+export const useHistoryStack = (initialState) => {
+  const [state, setState] = useState(initialState);
+  const [past, setPast] = useState([]);
+  const [future, setFuture] = useState([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Load saved state from IndexedDB on mount
   useEffect(() => {
-    try {
-      localStorage.setItem('narrativeEditorHistory', JSON.stringify(history));
-      localStorage.setItem('narrativeEditorCurrent', current.toString());
-    } catch (error) {
-      console.error('Error saving to localStorage:', error);
-    }
-  }, [history, current]);
-  
-  const pushState = useCallback((newState) => {
-    setHistory(prev => {
-      const newHistory = prev.slice(0, current + 1);
-      newHistory.push(newState);
-      if (newHistory.length > maxHistory) {
-        newHistory.shift();
-        return newHistory;
+    const loadSavedState = async () => {
+      try {
+        const savedData = await loadFromDB();
+        if (savedData) {
+          setState(savedData.state);
+          setPast(savedData.past);
+          setFuture(savedData.future);
+        }
+      } catch (error) {
+        console.error('Error loading from IndexedDB:', error);
+      } finally {
+        setIsInitialized(true);
       }
-      return newHistory;
-    });
-    setCurrent(prev => Math.min(prev + 1, maxHistory - 1));
-  }, [current, maxHistory]);
+    };
+    loadSavedState();
+  }, []);
+
+  // Add cleanup function
+  useEffect(() => {
+    return () => {
+      closeDB();
+    };
+  }, []);
+
+  // Modified save effect
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    let isMounted = true;
+    const saveState = async (retries = 0) => {
+      try {
+        if (!isMounted) return;
+        
+        // Only store the essential data
+        const dataToStore = {
+          state: {
+            ...state,
+            chapters: state.chapters.map(chapter => ({
+              ...chapter,
+              scenes: Object.fromEntries(
+                Object.entries(chapter.scenes).map(([id, scene]) => [
+                  id,
+                  {
+                    description: scene.description,
+                    location: scene.location,
+                    actions: scene.actions,
+                    position: scene.position
+                  }
+                ])
+              )
+            }))
+          },
+          past: past.map(item => ({
+            ...item,
+            chapters: item.chapters.map(chapter => ({
+              ...chapter,
+              scenes: Object.fromEntries(
+                Object.entries(chapter.scenes).map(([id, scene]) => [
+                  id,
+                  {
+                    description: scene.description,
+                    location: scene.location,
+                    actions: scene.actions,
+                    position: scene.position
+                  }
+                ])
+              )
+            }))
+          })),
+          future: future.map(item => ({
+            ...item,
+            chapters: item.chapters.map(chapter => ({
+              ...chapter,
+              scenes: Object.fromEntries(
+                Object.entries(chapter.scenes).map(([id, scene]) => [
+                  id,
+                  {
+                    description: scene.description,
+                    location: scene.location,
+                    actions: scene.actions,
+                    position: scene.position
+                  }
+                ])
+              )
+            }))
+          }))
+        };
+
+        await saveToDB(dataToStore);
+      } catch (error) {
+        console.error(`Error saving to IndexedDB (attempt ${retries + 1}):`, error);
+        if (isMounted && retries < MAX_RETRIES) {
+          await wait(RETRY_DELAY);
+          await saveState(retries + 1);
+        }
+      }
+    };
+
+    saveState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [state, past, future, isInitialized]);
+
+  const pushState = useCallback((newState) => {
+    setPast(prev => [...prev, state]);
+    setState(newState);
+    setFuture([]);
+  }, [state]);
 
   const undo = useCallback(() => {
-    if (canUndo) {
-      setCurrent(prev => prev - 1);
-    }
-  }, [canUndo]);
+    if (past.length === 0) return;
+    
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, past.length - 1);
+    
+    setPast(newPast);
+    setState(previous);
+    setFuture(prev => [state, ...prev]);
+  }, [past, state]);
 
   const redo = useCallback(() => {
-    if (canRedo) {
-      setCurrent(prev => prev + 1);
-    }
-  }, [canRedo]);
+    if (future.length === 0) return;
+    
+    const next = future[0];
+    const newFuture = future.slice(1);
+    
+    setPast(prev => [...prev, state]);
+    setState(next);
+    setFuture(newFuture);
+  }, [future, state]);
 
   const clearHistory = useCallback(() => {
-    setHistory(prev => [prev[current]]);
-    setCurrent(0);
-    
-    localStorage.removeItem('narrativeEditorHistory');
-    localStorage.removeItem('narrativeEditorCurrent');
-  }, [current]);
+    setPast([]);
+    setFuture([]);
+  }, []);
 
   return {
-    state: history[current],
+    state,
     pushState,
     undo,
     redo,
-    canUndo,
-    canRedo,
-    clearHistory
+    clearHistory,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0,
+    isInitialized
   };
 }; 
