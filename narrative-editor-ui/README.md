@@ -14,7 +14,8 @@ This project is built with React and Vite, providing a fast and efficient develo
    git clone https://github.com/hikaye-ai/narrative-editor.git
 
    # Navigate to project directory
-   cd narrative-editor
+   cd narrative-editor/narrative-editor-ui
+
 
    # Install dependencies
    npm install
